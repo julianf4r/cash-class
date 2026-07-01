@@ -29,8 +29,6 @@ footer{border-top:1px solid #dcdbd4;color:#7f8983;text-align:center;padding:24px
 .money-table:after{content:'';position:absolute;left:3%;right:3%;top:53%;height:1px;background:#6c412744;box-shadow:0 1px #f1cb9747;pointer-events:none}
 .table-instruction{position:absolute;right:15px;top:12px;display:flex;align-items:center;gap:8px;color:#4f321f;background:#fff9edc9;border:1px solid #fff5df;border-radius:9px;padding:7px 10px;box-shadow:0 2px 8px #4a2c1824;z-index:40;pointer-events:none}
 .table-instruction span,.table-instruction strong{display:block}.table-instruction span{font-size:8px}.table-instruction strong{font-size:10px}
-.table-label{position:absolute;left:14px;color:#50331f99;font-size:8px;font-weight:800;letter-spacing:1.4px;z-index:30;pointer-events:none}.bills-label{top:16px}.coins-label{top:56%}
-.coin-size-key{position:absolute;right:13px;bottom:10px;display:flex;align-items:end;gap:8px;padding:5px 8px;border-radius:8px;background:#69442925;color:#4d321f;font-size:7px;font-weight:700;z-index:30;pointer-events:none}.coin-size-key span{display:flex;align-items:center;gap:3px}.coin-size-key i{display:block;border-radius:50%;background:#d9d5c8;border:1px solid #7c786e}
 .physical-money{position:absolute;left:var(--piece-x);top:var(--piece-y);z-index:var(--piece-z);border:0;background:none;padding:0;cursor:grab;transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation));transition:filter .15s,box-shadow .15s;touch-action:none;-webkit-tap-highlight-color:transparent}
 .physical-money img{display:block;width:100%;height:100%;pointer-events:none;user-select:none}
 .physical-money.kind-bill{width:min(20%,145px);aspect-ratio:2.38/1;border-radius:3px;filter:drop-shadow(0 3px 3px #3d271a55)}
@@ -51,7 +49,7 @@ footer{border-top:1px solid #dcdbd4;color:#7f8983;text-align:center;padding:24px
 footer small{display:block;margin-top:9px;color:#929b96;font-size:10px;line-height:1.5}
 
 @media(max-width:900px){.money-table{height:500px}.physical-money.kind-bill{width:min(20%,150px)}.wallet-legend{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:650px){.money-table{height:560px}.table-instruction{top:38px;right:10px}.physical-money.kind-bill{width:42%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.five{left:25%}.physical-money.kind-bill.ten,.physical-money.kind-bill.one{left:74%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.ten{top:21%}.physical-money.kind-bill.five,.physical-money.kind-bill.one{top:40%}.money-table:after{top:52%}.coins-label{top:54%}.physical-money.kind-coin{width:61px;height:61px}.wallet-legend{grid-template-columns:1fr 1fr}.coin-size-key{display:none}}
+@media(max-width:650px){.money-table{height:560px}.table-instruction{top:38px;right:10px}.physical-money.kind-bill{width:42%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.five{left:25%}.physical-money.kind-bill.ten,.physical-money.kind-bill.one{left:74%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.ten{top:21%}.physical-money.kind-bill.five,.physical-money.kind-bill.one{top:40%}.money-table:after{top:52%}.physical-money.kind-coin{width:61px;height:61px}.wallet-legend{grid-template-columns:1fr 1fr}}
 
 /* Large tabletop layout and one shared physical scale */
 main{width:min(1480px,calc(100% - 32px))}
@@ -73,7 +71,6 @@ main{width:min(1480px,calc(100% - 32px))}
 .physical-money.kind-coin.dragging{transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation)) scale(var(--coin-scale))}
 .physical-money.kind-coin .money-value-badge{right:-12px;top:-10px;min-width:21px;height:17px;padding:0 4px;font-size:7px}
 .table-instruction{top:10px}
-.table-label{left:16px}
 
 @media(max-width:1100px){
   .game-layout{grid-template-columns:1fr}
@@ -105,7 +102,6 @@ main{width:min(1480px,calc(100% - 32px))}
 .money-table:after{content:none}
 .table-canvas{position:relative;width:1500px;height:900px;overflow:hidden;background:linear-gradient(92deg,#bb8751,#d0a36d 38%,#b77e48 72%,#cb9a62);touch-action:none}
 .table-canvas .table-grain{inset:0}
-.scale-label{top:18px;left:22px}
 .physical-money.kind-bill{width:340px;aspect-ratio:2.35/1}
 .physical-money.kind-coin{width:52.9px;height:52.9px;aspect-ratio:1}
 .physical-money.kind-coin .money-value-badge{right:-10px;top:-8px;min-width:23px;height:18px;font-size:8px}

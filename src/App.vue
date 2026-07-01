@@ -849,13 +849,6 @@ function endPan(event: PointerEvent) {
                 @pointercancel="endPan"
               >
               <div class="table-grain"></div>
-              <div class="table-label scale-label">ONE SHARED PHYSICAL SCALE · BILLS AND COINS MAY OVERLAP</div>
-              <div class="coin-size-key">
-                <span v-for="money in coinDenominations" :key="money.id">
-                  <i :style="{ width: `${((money.diameter ?? 24.26) / 24.26) * 17}px`, height: `${((money.diameter ?? 24.26) / 24.26) * 17}px` }"></i>
-                  {{ money.shortName }}
-                </span>
-              </div>
 
               <button
                 v-for="piece in walletPieces"
