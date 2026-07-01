@@ -150,7 +150,7 @@ function loadProgress(): PersistedProgress | null {
       progress.version !== 1
       || !Number.isInteger(progress.level)
       || progress.level! < 1
-      || progress.level! > 3
+      || progress.level! > 4
       || typeof progress.score !== 'number'
       || typeof progress.streak !== 'number'
       || typeof progress.solved !== 'number'
@@ -188,12 +188,18 @@ const tableCanvasRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
 const coinDenominations = denominations.filter((item) => item.kind === 'coin')
-const levelNames = ['Quarter Basics', 'Quarter Combos', 'Real-World Cents']
+const levelNames = ['Quarter Basics', 'Quarter Combos', 'Real-World Cents', 'Limited Wallet']
 const quarterTips = [
   'Think in quarters first: 25¢, 50¢, 75¢ — then fill the remainder.',
   'For 65¢, start with two quarters. Only 15¢ remains.',
   'A quarter plus a nickel makes 30¢ with just two coins.',
   'Three quarters make 75¢. That shortcut replaces seven dimes and a nickel.',
+]
+const limitedWalletTips = [
+  'Start with the largest useful piece you actually have, not the one you wish you had.',
+  'When a usual denomination is missing, replace it with smaller bills or coins.',
+  'There may be several valid payments. In this level, exact is what matters.',
+  'Count what is available before deciding how to build the amount.',
 ]
 let nextPieceLayer = Math.max(100, ...Object.values(pieceLayers.value))
 
@@ -223,7 +229,47 @@ function solveBounded(target: number, inventory: Record<string, number>) {
   return { count: dp[target], selection: paths[target] || {} }
 }
 
+function makeLimitedWalletRound(): Round {
+  const billScenarios = [
+    { dollars: 7, bills: { ten: 1, one: 8 } },
+    { dollars: 12, bills: { twenty: 1, five: 3, one: 4 } },
+    { dollars: 17, bills: { twenty: 1, five: 4, one: 4 } },
+    { dollars: 22, bills: { fifty: 1, ten: 3, five: 1, one: 4 } },
+    { dollars: 27, bills: { fifty: 1, ten: 3, five: 2, one: 4 } },
+    { dollars: 32, bills: { fifty: 1, ten: 4, five: 1, one: 4 } },
+  ]
+  const centScenarios = [
+    { cents: 30, coins: { dime: 4, nickel: 2, penny: 4 } },
+    { cents: 35, coins: { dime: 4, nickel: 3, penny: 4 } },
+    { cents: 40, coins: { dime: 5, nickel: 3, penny: 4 } },
+    { cents: 55, coins: { dime: 6, nickel: 3, penny: 4 } },
+    { cents: 60, coins: { dime: 7, nickel: 3, penny: 4 } },
+    { cents: 65, coins: { dime: 7, nickel: 3, penny: 4 } },
+    { cents: 75, coins: { dime: 8, nickel: 3, penny: 4 } },
+  ]
+  const billScenario = billScenarios[Math.floor(Math.random() * billScenarios.length)] ?? billScenarios[0]!
+  const centScenario = centScenarios[Math.floor(Math.random() * centScenarios.length)] ?? centScenarios[0]!
+  const inventory = Object.fromEntries(denominations.map((money) => [money.id, 0]))
+  Object.entries(billScenario.bills).forEach(([id, count]) => {
+    inventory[id] = count
+  })
+  Object.entries(centScenario.coins).forEach(([id, count]) => {
+    inventory[id] = count
+  })
+  const target = billScenario.dollars * 100 + centScenario.cents
+  const answer = solveBounded(target, inventory)
+  return {
+    target,
+    inventory,
+    optimalCount: answer.count,
+    optimalSelection: answer.selection,
+    layoutSeed: Math.floor(Math.random() * 1_000_000_000),
+  }
+}
+
 function makeRound(difficulty: number): Round {
+  if (difficulty === 4) return makeLimitedWalletRound()
+
   const billScenarios = difficulty === 1
     ? [
         { dollars: 1, bills: { one: 1 } },
@@ -297,7 +343,14 @@ const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + 
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
 const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
-const currentTip = computed(() => quarterTips[(solved.value + level.value - 1) % quarterTips.length] ?? '')
+const currentTip = computed(() => {
+  const tips = level.value === 4 ? limitedWalletTips : quarterTips
+  return tips[(solved.value + level.value - 1) % tips.length] ?? ''
+})
+const walletInstructions = computed(() => level.value === 4
+  ? 'The usual best denominations are missing. Make the exact amount with what is available.'
+  : 'Build the dollar part quickly, then look for quarters before dimes.')
+const targetLabel = computed(() => level.value === 4 ? 'LIMITED WALLET · TARGET' : 'QUARTER FOCUS · TARGET')
 
 watch(
   [level, score, streak, solved, selected, result, hintStep, round, pieceOffsets, pieceLayers, pickedPieceKeys, flippedFaces],
@@ -453,7 +506,11 @@ const feedback = computed(() => {
     }
     return `Exact amount — but it can be done with ${round.value.optimalCount} pieces.`
   }
-  if (result.value === 'correct') return `Perfect! ${selectedCount.value} pieces is the fewest possible.`
+  if (result.value === 'correct') {
+    return level.value === 4
+      ? `Exact payment! A different combination was needed with this limited wallet.`
+      : `Perfect! ${selectedCount.value} pieces is the fewest possible.`
+  }
   return ''
 })
 const currentHint = computed(() => {
@@ -516,7 +573,7 @@ function returnPiece(money: Money, key: string) {
 function checkAnswer() {
   if (remaining.value > 0) result.value = 'short'
   else if (remaining.value < 0) result.value = 'over'
-  else if (selectedCount.value > round.value.optimalCount) result.value = 'not-optimal'
+  else if (level.value !== 4 && selectedCount.value > round.value.optimalCount) result.value = 'not-optimal'
   else {
     result.value = 'correct'
     score.value += 100 + Math.max(0, 3 - hintStep.value) * 25 + streak.value * 10
@@ -549,7 +606,7 @@ function resetProgress() {
   resetSelection()
 }
 function nextRound() {
-  if (solved.value > 0 && solved.value % 3 === 0 && level.value < 3) level.value += 1
+  if (solved.value > 0 && solved.value % 3 === 0 && level.value < 4) level.value += 1
   round.value = makeRound(level.value)
   resetSelection()
 }
@@ -735,7 +792,7 @@ function endPan(event: PointerEvent) {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ expert: level === 3 }">
+  <div class="app-shell" :class="{ expert: level >= 3 }">
     <header class="topbar">
       <a class="brand" href="#" aria-label="Cash Class home">
         <span class="brand-mark"><span>$</span></span>
@@ -748,7 +805,7 @@ function endPan(event: PointerEvent) {
           <ChevronDown :size="16" />
         </button>
         <div v-if="showLevelMenu" class="level-menu">
-          <button v-for="n in 3" :key="n" :class="{ active: level === n }" @click="changeLevel(n)">
+          <button v-for="n in 4" :key="n" :class="{ active: level === n }" @click="changeLevel(n)">
             Level {{ n }} · {{ levelNames[n - 1] }}
           </button>
         </div>
@@ -769,7 +826,7 @@ function endPan(event: PointerEvent) {
             <div>
               <span>
                 <strong>Choose your money</strong>
-                <p>Build the dollar part quickly, then look for quarters before dimes.</p>
+                <p>{{ walletInstructions }}</p>
               </span>
             </div>
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
@@ -843,7 +900,7 @@ function endPan(event: PointerEvent) {
             >
               <div class="cash-zone-heading">
                 <span class="payment-label"><small>PAYMENT AREA</small><strong>Drop money here</strong></span>
-                <span class="target-pill"><small>QUARTER FOCUS · TARGET</small><strong>{{ formatMoney(round.target) }}</strong></span>
+                <span class="target-pill"><small>{{ targetLabel }}</small><strong>{{ formatMoney(round.target) }}</strong></span>
               </div>
               <div class="cash-zone-total">
                 <span>SELECTED</span>
@@ -897,7 +954,7 @@ function endPan(event: PointerEvent) {
               <div class="cash-zone-footer">
                 <div class="piece-count">
                   <span><strong>{{ selectedCount }}</strong> pieces used</span>
-                  <span v-if="result === 'correct'"><Trophy :size="14" /> Optimal!</span>
+                  <span v-if="result === 'correct'"><Trophy :size="14" /> {{ level === 4 ? 'Exact!' : 'Optimal!' }}</span>
                 </div>
                 <button v-if="result !== 'correct'" class="primary-button" :disabled="!selectedCount" @click="checkAnswer">
                   Check my answer <ArrowRight :size="17" />
@@ -934,7 +991,7 @@ function endPan(event: PointerEvent) {
       <div class="coin-preview-image">
         <img :src="pieceImage(coinPreview.piece)" alt="" draggable="false">
       </div>
-      <span v-if="level !== 3">
+      <span v-if="level < 3">
         <strong>{{ coinPreview.piece.money.name }}</strong>
         <small>{{ pieceSideLabel(coinPreview.piece) }} · magnified view</small>
       </span>
