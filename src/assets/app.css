@@ -98,8 +98,8 @@ main{width:min(1480px,calc(100% - 32px))}
 /* Explorable tabletop: fixed real-world scale inside a pannable canvas */
 .canvas-help{display:flex;align-items:center;justify-content:flex-end;gap:20px;min-height:40px;color:#654731;font-size:11px}
 .canvas-help>span{display:flex;align-items:center;gap:5px}.canvas-help strong{color:#422d1d}
-.money-table{height:700px;margin-top:6px;overflow:auto;cursor:grab;overscroll-behavior:contain;scrollbar-color:#7b5638 #c99b67;scrollbar-width:thin}
-.money-table::-webkit-scrollbar{width:10px;height:10px}.money-table::-webkit-scrollbar-track{margin:7px;border-radius:10px;background:#c99b67}.money-table::-webkit-scrollbar-thumb{border:2px solid #c99b67;border-radius:10px;background:#765033}.money-table::-webkit-scrollbar-button{display:none;width:0;height:0}.money-table::-webkit-scrollbar-corner{background:transparent}
+.money-table{height:700px;margin-top:6px;overflow:auto;cursor:grab;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none}
+.money-table::-webkit-scrollbar{display:none;width:0;height:0}
 .money-table.panning{cursor:grabbing}
 .money-table:after{content:none}
 .table-canvas{position:relative;width:1500px;height:900px;overflow:hidden;background:linear-gradient(92deg,#bb8751,#d0a36d 38%,#b77e48 72%,#cb9a62);touch-action:none}
