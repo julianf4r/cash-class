@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   ArrowRight, Check, ChevronDown, CircleHelp, Hand, Lightbulb, Move,
   RotateCcw, Trophy, X, Zap,
@@ -98,21 +98,66 @@ type CoinPreview = {
   top: number
 }
 
-const level = ref(1)
-const score = ref(0)
-const streak = ref(0)
-const solved = ref(0)
-const selected = ref<Record<string, number>>({})
-const result = ref<'idle' | 'short' | 'over' | 'correct' | 'not-optimal'>('idle')
-const hintStep = ref(0)
+type Result = 'idle' | 'short' | 'over' | 'correct' | 'not-optimal'
+type PersistedProgress = {
+  version: 1
+  level: number
+  score: number
+  streak: number
+  solved: number
+  selected: Record<string, number>
+  result: Result
+  hintStep: number
+  round: Round
+  pieceOffsets: Record<string, { x: number; y: number }>
+  pieceLayers: Record<string, number>
+  pickedPieceKeys: Record<string, boolean>
+  flippedFaces: Record<string, 'front' | 'back'>
+}
+
+const PROGRESS_STORAGE_KEY = 'cash-class-progress'
+
+function loadProgress(): PersistedProgress | null {
+  try {
+    const stored = localStorage.getItem(PROGRESS_STORAGE_KEY)
+    if (!stored) return null
+    const progress = JSON.parse(stored) as Partial<PersistedProgress>
+    if (
+      progress.version !== 1
+      || !Number.isInteger(progress.level)
+      || progress.level! < 1
+      || progress.level! > 3
+      || typeof progress.score !== 'number'
+      || typeof progress.streak !== 'number'
+      || typeof progress.solved !== 'number'
+      || !progress.round
+      || typeof progress.round.target !== 'number'
+      || typeof progress.round.layoutSeed !== 'number'
+    ) {
+      return null
+    }
+    return progress as PersistedProgress
+  } catch {
+    return null
+  }
+}
+
+const savedProgress = loadProgress()
+const level = ref(savedProgress?.level ?? 1)
+const score = ref(savedProgress?.score ?? 0)
+const streak = ref(savedProgress?.streak ?? 0)
+const solved = ref(savedProgress?.solved ?? 0)
+const selected = ref<Record<string, number>>(savedProgress?.selected ?? {})
+const result = ref<Result>(savedProgress?.result ?? 'idle')
+const hintStep = ref(savedProgress?.hintStep ?? 0)
 const showGuide = ref(false)
 const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
 const panState = ref<PanState | null>(null)
-const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
-const pieceLayers = ref<Record<string, number>>({})
-const pickedPieceKeys = ref<Record<string, boolean>>({})
-const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
+const pieceOffsets = ref<Record<string, { x: number; y: number }>>(savedProgress?.pieceOffsets ?? {})
+const pieceLayers = ref<Record<string, number>>(savedProgress?.pieceLayers ?? {})
+const pickedPieceKeys = ref<Record<string, boolean>>(savedProgress?.pickedPieceKeys ?? {})
+const flippedFaces = ref<Record<string, 'front' | 'back'>>(savedProgress?.flippedFaces ?? {})
 const coinPreview = ref<CoinPreview | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
 const tableCanvasRef = ref<HTMLElement | null>(null)
@@ -126,7 +171,7 @@ const quarterTips = [
   'A quarter plus a nickel makes 30¢ with just two coins.',
   'Three quarters make 75¢. That shortcut replaces seven dimes and a nickel.',
 ]
-let nextPieceLayer = 100
+let nextPieceLayer = Math.max(100, ...Object.values(pieceLayers.value))
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -223,12 +268,39 @@ function makeRound(difficulty: number): Round {
   }
 }
 
-const round = ref<Round>(makeRound(level.value))
+const round = ref<Round>(savedProgress?.round ?? makeRound(level.value))
 const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + (selected.value[money.id] || 0) * money.value, 0))
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
 const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
 const currentTip = computed(() => quarterTips[(solved.value + level.value - 1) % quarterTips.length] ?? '')
+
+watch(
+  [level, score, streak, solved, selected, result, hintStep, round, pieceOffsets, pieceLayers, pickedPieceKeys, flippedFaces],
+  () => {
+    const progress: PersistedProgress = {
+      version: 1,
+      level: level.value,
+      score: score.value,
+      streak: streak.value,
+      solved: solved.value,
+      selected: selected.value,
+      result: result.value,
+      hintStep: hintStep.value,
+      round: round.value,
+      pieceOffsets: pieceOffsets.value,
+      pieceLayers: pieceLayers.value,
+      pickedPieceKeys: pickedPieceKeys.value,
+      flippedFaces: flippedFaces.value,
+    }
+    try {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress))
+    } catch {
+      // The game remains usable when storage is disabled or full.
+    }
+  },
+  { deep: true },
+)
 
 function seededNumber(seedText: string) {
   let hash = 2166136261
@@ -423,6 +495,20 @@ function resetSelection() {
   flippedFaces.value = {}
   result.value = 'idle'
   hintStep.value = 0
+}
+function resetProgress() {
+  if (!window.confirm('Reset all learning progress and start over?')) return
+  try {
+    localStorage.removeItem(PROGRESS_STORAGE_KEY)
+  } catch {
+    // Reset the in-memory state even when storage is unavailable.
+  }
+  level.value = 1
+  score.value = 0
+  streak.value = 0
+  solved.value = 0
+  round.value = makeRound(1)
+  resetSelection()
 }
 function nextRound() {
   if (solved.value > 0 && solved.value % 3 === 0 && level.value < 3) level.value += 1
@@ -631,6 +717,9 @@ function endPan(event: PointerEvent) {
       </div>
       <div class="header-actions">
         <div class="streak"><Zap :size="16" fill="currentColor" /> {{ streak }} streak</div>
+        <button class="reset-progress-button" aria-label="Reset all progress" title="Reset all progress" @click="resetProgress">
+          <RotateCcw :size="16" /><span>Reset progress</span>
+        </button>
         <button class="icon-button" aria-label="Open money guide" @click="showGuide = true"><CircleHelp :size="20" /></button>
         <div class="avatar">JD</div>
       </div>
