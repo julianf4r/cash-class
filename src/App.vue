@@ -525,7 +525,6 @@ function endPan(event: PointerEvent) {
         <div class="wallet-panel">
           <div class="panel-heading">
             <div>
-              <span class="step-number">1</span>
               <span><small>YOUR WALLET</small><strong>Choose your money</strong></span>
             </div>
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
