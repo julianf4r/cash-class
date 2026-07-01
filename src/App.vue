@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import {
   ArrowRight, Check, ChevronDown, CircleHelp, Hand, Lightbulb, Move,
-  RotateCcw, Sparkles, Trophy, X, Zap,
+  RotateCcw, Trophy, X, Zap,
 } from '@lucide/vue'
 import bill1Url from './assets/money/bill-1.jpg'
 import bill5Url from './assets/money/bill-5.jpg'
@@ -152,12 +152,12 @@ const currentTip = computed(() => denominations[(solved.value + level.value) % d
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
   const billAnchors = [
-    { x: 300, y: 225 },
-    { x: 560, y: 255 },
-    { x: 820, y: 210 },
-    { x: 1060, y: 310 },
-    { x: 455, y: 495 },
-    { x: 745, y: 505 },
+    { x: 280, y: 220 },
+    { x: 500, y: 280 },
+    { x: 720, y: 205 },
+    { x: 350, y: 500 },
+    { x: 610, y: 480 },
+    { x: 830, y: 430 },
   ]
   denominations.forEach((money) => {
     const inventoryCount = round.value.inventory[money.id] ?? 0
@@ -178,6 +178,27 @@ const walletPieces = computed<WalletPiece[]>(() => {
           ? billAnchor.y + index * 9
           : 165 + ((groupIndex * 151 + index * 109) % 610),
         rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
+      })
+    }
+  })
+  return pieces
+})
+const selectedPieces = computed<WalletPiece[]>(() => {
+  const pieces: WalletPiece[] = []
+  let selectedBillIndex = 0
+  let selectedCoinIndex = 0
+  denominations.forEach((money) => {
+    for (let index = 0; index < (round.value.inventory[money.id] ?? 0); index++) {
+      const key = `${money.id}-${index}`
+      if (!pickedPieceKeys.value[key]) continue
+      const displayIndex = money.kind === 'bill' ? selectedBillIndex++ : selectedCoinIndex++
+      pieces.push({
+        key,
+        money,
+        index,
+        x: money.kind === 'bill' ? 135 + (displayIndex % 2) * 155 : 62 + (displayIndex % 6) * 56,
+        y: money.kind === 'bill' ? 205 + Math.floor(displayIndex / 2) * 68 : 475 + Math.floor(displayIndex / 6) * 52,
+        rotation: ((displayIndex * 5) % 9) - 4,
       })
     }
   })
@@ -224,6 +245,13 @@ function pickPiece(money: Money, key: string) {
   if (pickedPieceKeys.value[key]) return
   pickedPieceKeys.value[key] = true
   selected.value[money.id] = (selected.value[money.id] ?? 0) + 1
+  result.value = 'idle'
+}
+
+function returnPiece(money: Money, key: string) {
+  if (!pickedPieceKeys.value[key]) return
+  delete pickedPieceKeys.value[key]
+  selected.value[money.id] = Math.max(0, (selected.value[money.id] ?? 0) - 1)
   result.value = 'idle'
 }
 function checkAnswer() {
@@ -309,8 +337,12 @@ function endDrag(event: PointerEvent) {
         y: currentOffset.y + drag.dy,
       }
     }
-  } else if (!drag.moved || isPointInside(tableRef.value, event.clientX, event.clientY)) {
-    adjust(drag.money, -1)
+  } else if (
+    !drag.moved ||
+    (!isPointInside(trayRef.value, event.clientX, event.clientY) &&
+      isPointInside(tableRef.value, event.clientX, event.clientY))
+  ) {
+    returnPiece(drag.money, drag.key)
   }
   dragState.value = null
 }
@@ -331,6 +363,20 @@ function pieceStyle(piece: WalletPiece) {
     '--drag-y': `${drag?.dy ?? 0}px`,
     '--coin-scale': coinScale,
     '--piece-z': drag ? 100 : piece.index + 1,
+  }
+}
+
+function selectedPieceStyle(piece: WalletPiece) {
+  const drag = dragState.value?.key === piece.key ? dragState.value : null
+  const coinScale = piece.money.kind === 'coin' ? (piece.money.diameter ?? 24.26) / 24.26 : 1
+  return {
+    '--tray-x': `${piece.x}px`,
+    '--tray-y': `${piece.y}px`,
+    '--piece-rotation': `${piece.rotation}deg`,
+    '--drag-x': `${drag?.dx ?? 0}px`,
+    '--drag-y': `${drag?.dy ?? 0}px`,
+    '--coin-scale': coinScale,
+    '--piece-z': drag ? 200 : piece.index + 1,
   }
 }
 
@@ -394,11 +440,6 @@ function endPan(event: PointerEvent) {
           <h1>Make the exact amount.</h1>
           <p>Use the fewest bills and coins possible from your wallet.</p>
         </div>
-        <div class="target-card">
-          <span>YOUR TARGET</span>
-          <strong>{{ formatMoney(round.target) }}</strong>
-          <em><Sparkles :size="13" /> Fewest pieces wins</em>
-        </div>
       </section>
 
       <section class="game-layout">
@@ -412,17 +453,18 @@ function endPan(event: PointerEvent) {
           </div>
 
           <div class="canvas-help">
-            <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the tray</span>
+            <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the payment area</span>
             <span><Move :size="15" /><strong>Drag the wood</strong> to move around the table</span>
           </div>
-          <div ref="tableRef" class="money-table" :class="{ panning: panState }">
-            <div
-              class="table-canvas"
-              @pointerdown.prevent="beginPan"
-              @pointermove.prevent="movePan"
-              @pointerup.prevent="endPan"
-              @pointercancel="endPan"
-            >
+          <div class="table-stage">
+            <div ref="tableRef" class="money-table" :class="{ panning: panState }">
+              <div
+                class="table-canvas"
+                @pointerdown.prevent="beginPan"
+                @pointermove.prevent="movePan"
+                @pointerup.prevent="endPan"
+                @pointercancel="endPan"
+              >
               <div class="table-grain"></div>
               <div class="table-label scale-label">ONE SHARED PHYSICAL SCALE · BILLS AND COINS MAY OVERLAP</div>
               <div class="coin-size-key">
@@ -454,73 +496,75 @@ function endPan(event: PointerEvent) {
                 <span class="money-value-badge">{{ piece.money.shortName }}</span>
               </button>
 
-              <div v-if="!walletPieces.length" class="table-empty">
-                <Check :size="22" /><strong>Everything is in your tray</strong>
+                <div v-if="!walletPieces.length" class="table-empty">
+                  <Check :size="22" /><strong>Everything is in the payment area</strong>
+                </div>
               </div>
             </div>
-          </div>
 
+            <section ref="trayRef" class="cash-zone" :class="{ 'drop-ready': dragState?.source === 'table' }">
+              <div class="cash-zone-heading">
+                <span><small>PAYMENT AREA</small><strong>Drop your answer here</strong></span>
+                <span class="target-pill">TARGET {{ formatMoney(round.target) }}</span>
+              </div>
+              <div class="cash-zone-total">
+                <span>SELECTED</span>
+                <strong :class="{ over: remaining < 0, exact: remaining === 0 }">{{ formatMoney(selectedTotal) }}</strong>
+                <div class="progress-track"><i :style="{ width: `${progress}%` }"></i></div>
+                <small>{{ remaining > 0 ? `${formatMoney(remaining)} to go` : remaining < 0 ? `${formatMoney(-remaining)} over` : 'Exact amount!' }}</small>
+              </div>
+
+              <div v-if="selectedCount" class="cash-zone-pieces">
+                <button
+                  v-for="piece in selectedPieces"
+                  :key="piece.key"
+                  :class="[
+                    'selected-money',
+                    `kind-${piece.money.kind}`,
+                    piece.money.id,
+                    { dragging: dragState?.key === piece.key },
+                  ]"
+                  :style="selectedPieceStyle(piece)"
+                  :aria-label="`Return one ${piece.money.name} to the table`"
+                  @pointerdown.stop.prevent="beginDrag($event, piece.money, piece.key, 'tray')"
+                  @pointermove.stop.prevent="moveDrag"
+                  @pointerup.stop.prevent="endDrag"
+                  @pointercancel.stop="cancelDrag"
+                  @keydown.enter.prevent="returnPiece(piece.money, piece.key)"
+                  @keydown.space.prevent="returnPiece(piece.money, piece.key)"
+                >
+                  <img :src="piece.money.image" alt="" draggable="false">
+                  <span>{{ piece.money.shortName }}</span>
+                </button>
+              </div>
+              <div v-else class="cash-zone-empty">
+                <Hand :size="25" />
+                <strong>Place money inside this area</strong>
+                <small>Drop a piece here or tap it on the table.</small>
+              </div>
+
+              <div v-if="feedback" :class="['feedback', result]">
+                <span><Check v-if="result === 'correct'" :size="19" /><Lightbulb v-else :size="19" /></span>
+                <p>{{ feedback }}</p>
+              </div>
+              <div v-if="hintStep" class="hint-box">
+                <Lightbulb :size="17" /><span><small>HINT {{ hintStep }}</small>{{ currentHint }}</span>
+              </div>
+
+              <div class="cash-zone-footer">
+                <div class="piece-count">
+                  <span><strong>{{ selectedCount }}</strong> pieces used</span>
+                  <span v-if="result === 'correct'"><Trophy :size="14" /> Optimal!</span>
+                </div>
+                <button v-if="result !== 'correct'" class="primary-button" :disabled="!selectedCount" @click="checkAnswer">
+                  Check my answer <ArrowRight :size="17" />
+                </button>
+                <button v-else class="primary-button success" @click="nextRound">Next challenge <ArrowRight :size="17" /></button>
+                <button v-if="result !== 'correct'" class="hint-button" @click="useHint"><Lightbulb :size="15" /> Need a hint?</button>
+              </div>
+            </section>
+          </div>
         </div>
-
-        <aside ref="trayRef" class="tray-panel" :class="{ 'drop-ready': dragState?.source === 'table' }">
-          <div class="panel-heading compact">
-            <div><span class="step-number">2</span><span><small>YOUR ANSWER</small><strong>Cash tray</strong></span></div>
-          </div>
-          <div class="total-display">
-            <span>SELECTED TOTAL</span>
-            <strong :class="{ over: remaining < 0, exact: remaining === 0 }">{{ formatMoney(selectedTotal) }}</strong>
-            <div class="progress-track"><i :style="{ width: `${progress}%` }"></i></div>
-            <div class="target-caption">
-              <span>{{ remaining > 0 ? `${formatMoney(remaining)} to go` : remaining < 0 ? `${formatMoney(-remaining)} over` : 'Exact amount!' }}</span>
-              <span>Target {{ formatMoney(round.target) }}</span>
-            </div>
-          </div>
-
-          <div v-if="selectedCount" class="tray-items">
-            <div v-for="money in denominations.filter((item) => selected[item.id])" :key="money.id" class="tray-row">
-              <button
-                :class="['mini-money', money.kind, money.id, { dragging: dragState?.key === `tray-${money.id}` }]"
-                :aria-label="`Return one ${money.name} to the table`"
-                @pointerdown.prevent="beginDrag($event, money, `tray-${money.id}`, 'tray')"
-                @pointermove.prevent="moveDrag"
-                @pointerup.prevent="endDrag"
-                @pointercancel="cancelDrag"
-                @keydown.enter.prevent="adjust(money, -1)"
-                @keydown.space.prevent="adjust(money, -1)"
-              >
-                <img :src="money.image" alt="" draggable="false">
-              </button>
-              <span><strong>{{ money.name }}</strong><small>{{ selected[money.id] }} × {{ money.shortName }}</small></span>
-              <b>{{ formatMoney((selected[money.id] ?? 0) * money.value) }}</b>
-              <button @click="adjust(money, -(selected[money.id] ?? 0))"><X :size="14" /></button>
-            </div>
-          </div>
-          <div v-else class="empty-tray">
-            <span><Hand :size="22" /></span>
-            <strong>Drop money here</strong>
-            <p>Drag from the table or tap a piece.</p>
-          </div>
-
-          <div v-if="feedback" :class="['feedback', result]">
-            <span><Check v-if="result === 'correct'" :size="19" /><Lightbulb v-else :size="19" /></span>
-            <p>{{ feedback }}</p>
-          </div>
-          <div v-if="hintStep" class="hint-box">
-            <Lightbulb :size="17" /><span><small>HINT {{ hintStep }}</small>{{ currentHint }}</span>
-          </div>
-
-          <div class="tray-footer">
-            <div class="piece-count">
-              <span><strong>{{ selectedCount }}</strong> pieces used</span>
-              <span v-if="result === 'correct'"><Trophy :size="14" /> Optimal!</span>
-            </div>
-            <button v-if="result !== 'correct'" class="primary-button" :disabled="!selectedCount" @click="checkAnswer">
-              Check my answer <ArrowRight :size="17" />
-            </button>
-            <button v-else class="primary-button success" @click="nextRound">Next challenge <ArrowRight :size="17" /></button>
-            <button v-if="result !== 'correct'" class="hint-button" @click="useHint"><Lightbulb :size="15" /> Need a hint?</button>
-          </div>
-        </aside>
       </section>
 
       <section class="stats-strip">
