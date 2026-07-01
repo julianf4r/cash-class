@@ -1,42 +1,24 @@
-# learning-coins
+# CashClass
 
-This template should help get you started developing with Vue 3 in Vite.
+一个通过模拟整理和支付真实美元，帮助用户熟悉美国纸币、硬币及 Quarter（25¢）思维的网页应用。
 
-## Recommended IDE Setup
+## 主要功能
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- 使用真实美元纸币和硬币图片，并保持硬币的实际相对尺寸。
+- 在可平移的桌面上拖拽、堆叠和翻转钱币。
+- 将钱币拖入 Payment Area，以最少数量凑出目标金额。
+- 三个难度逐步训练 Quarter、Dime、Nickel 和 Penny 的组合。
+- 悬浮硬币可查看放大图，专家难度会隐藏名称与面值线索。
+- 自动计算最优解，并针对过度使用 Dime 的答案给出 Quarter 提示。
 
-## Recommended Browser Setup
+## 操作方式
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+- 单击：将钱币置顶。
+- 双击：快速加入 Payment Area。
+- 拖拽：移动钱币，或在桌面与 Payment Area 之间转移。
+- 右键：翻转钱币正反面。
+- 拖拽桌面空白区域：移动桌面画布。
 
-## Type Support for `.vue` Imports in TS
+## 说明
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-pnpm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-pnpm dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-pnpm build
-```
+钱币图片的来源和许可说明见 [`src/assets/money/README.md`](src/assets/money/README.md)。
