@@ -167,21 +167,23 @@ function loadProgress(): PersistedProgress | null {
 }
 
 const savedProgress = loadProgress()
+const hasLegacyLimitedRound = savedProgress?.level === 4
+  && (savedProgress.round.inventory.quarter ?? 0) === 0
 const level = ref(savedProgress?.level ?? 1)
 const score = ref(savedProgress?.score ?? 0)
 const streak = ref(savedProgress?.streak ?? 0)
 const solved = ref(savedProgress?.solved ?? 0)
-const selected = ref<Record<string, number>>(savedProgress?.selected ?? {})
-const result = ref<Result>(savedProgress?.result ?? 'idle')
-const hintStep = ref(savedProgress?.hintStep ?? 0)
+const selected = ref<Record<string, number>>(hasLegacyLimitedRound ? {} : (savedProgress?.selected ?? {}))
+const result = ref<Result>(hasLegacyLimitedRound ? 'idle' : (savedProgress?.result ?? 'idle'))
+const hintStep = ref(hasLegacyLimitedRound ? 0 : (savedProgress?.hintStep ?? 0))
 const showGuide = ref(false)
 const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
 const panState = ref<PanState | null>(null)
-const pieceOffsets = ref<Record<string, { x: number; y: number }>>(savedProgress?.pieceOffsets ?? {})
-const pieceLayers = ref<Record<string, number>>(savedProgress?.pieceLayers ?? {})
-const pickedPieceKeys = ref<Record<string, boolean>>(savedProgress?.pickedPieceKeys ?? {})
-const flippedFaces = ref<Record<string, 'front' | 'back'>>(savedProgress?.flippedFaces ?? {})
+const pieceOffsets = ref<Record<string, { x: number; y: number }>>(hasLegacyLimitedRound ? {} : (savedProgress?.pieceOffsets ?? {}))
+const pieceLayers = ref<Record<string, number>>(hasLegacyLimitedRound ? {} : (savedProgress?.pieceLayers ?? {}))
+const pickedPieceKeys = ref<Record<string, boolean>>(hasLegacyLimitedRound ? {} : (savedProgress?.pickedPieceKeys ?? {}))
+const flippedFaces = ref<Record<string, 'front' | 'back'>>(hasLegacyLimitedRound ? {} : (savedProgress?.flippedFaces ?? {}))
 const coinPreview = ref<CoinPreview | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
 const tableCanvasRef = ref<HTMLElement | null>(null)
@@ -229,40 +231,78 @@ function solveBounded(target: number, inventory: Record<string, number>) {
   return { count: dp[target], selection: paths[target] || {} }
 }
 
+function solveUnbounded(target: number) {
+  const unreachable = 9999
+  const dp = Array(target + 1).fill(unreachable)
+  const paths: Array<Record<string, number> | null> = Array(target + 1).fill(null)
+  dp[0] = 0
+  paths[0] = {}
+  for (let amount = 1; amount <= target; amount++) {
+    for (const money of denominations) {
+      if (money.value > amount || dp[amount - money.value] + 1 >= dp[amount]) continue
+      dp[amount] = dp[amount - money.value] + 1
+      paths[amount] = {
+        ...paths[amount - money.value],
+        [money.id]: (paths[amount - money.value]?.[money.id] || 0) + 1,
+      }
+    }
+  }
+  return { count: dp[target], selection: paths[target] || {} }
+}
+
+function randomInteger(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 function makeLimitedWalletRound(): Round {
-  const billScenarios = [
-    { dollars: 7, bills: { ten: 1, one: 8 } },
-    { dollars: 12, bills: { twenty: 1, five: 3, one: 4 } },
-    { dollars: 17, bills: { twenty: 1, five: 4, one: 4 } },
-    { dollars: 22, bills: { fifty: 1, ten: 3, five: 1, one: 4 } },
-    { dollars: 27, bills: { fifty: 1, ten: 3, five: 2, one: 4 } },
-    { dollars: 32, bills: { fifty: 1, ten: 4, five: 1, one: 4 } },
-  ]
-  const centScenarios = [
-    { cents: 30, coins: { dime: 4, nickel: 2, penny: 4 } },
-    { cents: 35, coins: { dime: 4, nickel: 3, penny: 4 } },
-    { cents: 40, coins: { dime: 5, nickel: 3, penny: 4 } },
-    { cents: 55, coins: { dime: 6, nickel: 3, penny: 4 } },
-    { cents: 60, coins: { dime: 7, nickel: 3, penny: 4 } },
-    { cents: 65, coins: { dime: 7, nickel: 3, penny: 4 } },
-    { cents: 75, coins: { dime: 8, nickel: 3, penny: 4 } },
-  ]
-  const billScenario = billScenarios[Math.floor(Math.random() * billScenarios.length)] ?? billScenarios[0]!
-  const centScenario = centScenarios[Math.floor(Math.random() * centScenarios.length)] ?? centScenarios[0]!
-  const inventory = Object.fromEntries(denominations.map((money) => [money.id, 0]))
-  Object.entries(billScenario.bills).forEach(([id, count]) => {
-    inventory[id] = count
-  })
-  Object.entries(centScenario.coins).forEach(([id, count]) => {
-    inventory[id] = count
-  })
-  const target = billScenario.dollars * 100 + centScenario.cents
-  const answer = solveBounded(target, inventory)
+  for (let attempt = 0; attempt < 250; attempt++) {
+    const target = randomInteger(5, 45) * 100 + randomInteger(25, 99)
+    const inventory: Record<string, number> = {
+      hundred: Math.random() < 0.08 ? 1 : 0,
+      fifty: Math.random() < 0.18 ? 1 : 0,
+      twenty: randomInteger(0, 3),
+      ten: randomInteger(0, 4),
+      five: randomInteger(0, 4),
+      one: randomInteger(2, 8),
+      quarter: randomInteger(1, 5),
+      dime: randomInteger(1, 7),
+      nickel: randomInteger(0, 4),
+      penny: randomInteger(1, 9),
+    }
+    const availableAnswer = solveBounded(target, inventory)
+    if (availableAnswer.count >= 9999 || availableAnswer.count > 16) continue
+
+    const theoreticalAnswer = solveUnbounded(target)
+    if (availableAnswer.count <= theoreticalAnswer.count) continue
+
+    return {
+      target,
+      inventory,
+      optimalCount: availableAnswer.count,
+      optimalSelection: availableAnswer.selection,
+      layoutSeed: Math.floor(Math.random() * 1_000_000_000),
+    }
+  }
+
+  const target = 1265
+  const inventory: Record<string, number> = {
+    hundred: 0,
+    fifty: 0,
+    twenty: 1,
+    ten: 0,
+    five: 3,
+    one: 4,
+    quarter: 1,
+    dime: 5,
+    nickel: 3,
+    penny: 4,
+  }
+  const availableAnswer = solveBounded(target, inventory)
   return {
     target,
     inventory,
-    optimalCount: answer.count,
-    optimalSelection: answer.selection,
+    optimalCount: availableAnswer.count,
+    optimalSelection: availableAnswer.selection,
     layoutSeed: Math.floor(Math.random() * 1_000_000_000),
   }
 }
@@ -338,7 +378,9 @@ function makeRound(difficulty: number): Round {
   }
 }
 
-const round = ref<Round>(savedProgress?.round ?? makeRound(level.value))
+const round = ref<Round>(
+  savedProgress && !hasLegacyLimitedRound ? savedProgress.round : makeRound(level.value),
+)
 const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + (selected.value[money.id] || 0) * money.value, 0))
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
 const remaining = computed(() => round.value.target - selectedTotal.value)
@@ -348,7 +390,7 @@ const currentTip = computed(() => {
   return tips[(solved.value + level.value - 1) % tips.length] ?? ''
 })
 const walletInstructions = computed(() => level.value === 4
-  ? 'The usual best denominations are missing. Make the exact amount with what is available.'
+  ? 'The fewest-piece combination may not be available. Make the exact amount with what you have.'
   : 'Build the dollar part quickly, then look for quarters before dimes.')
 const targetLabel = computed(() => level.value === 4 ? 'LIMITED WALLET · TARGET' : 'QUARTER FOCUS · TARGET')
 
