@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import {
-  ArrowRight, Check, ChevronDown, CircleHelp, Hand, Lightbulb,
+  ArrowRight, Check, ChevronDown, CircleHelp, Hand, Lightbulb, Move,
   RotateCcw, Sparkles, Trophy, X, Zap,
 } from '@lucide/vue'
 import bill1Url from './assets/money/bill-1.jpg'
@@ -67,6 +67,14 @@ type DragState = {
   moved: boolean
 }
 
+type PanState = {
+  pointerId: number
+  startX: number
+  startY: number
+  scrollLeft: number
+  scrollTop: number
+}
+
 const level = ref(1)
 const score = ref(0)
 const streak = ref(0)
@@ -77,6 +85,9 @@ const hintStep = ref(0)
 const showGuide = ref(false)
 const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
+const panState = ref<PanState | null>(null)
+const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
+const pickedPieceKeys = ref<Record<string, boolean>>({})
 const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
@@ -140,23 +151,32 @@ const progress = computed(() => Math.min((selectedTotal.value / round.value.targ
 const currentTip = computed(() => denominations[(solved.value + level.value) % denominations.length]?.fact ?? '')
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
+  const billAnchors = [
+    { x: 300, y: 225 },
+    { x: 560, y: 255 },
+    { x: 820, y: 210 },
+    { x: 1060, y: 310 },
+    { x: 455, y: 495 },
+    { x: 745, y: 505 },
+  ]
   denominations.forEach((money) => {
-    const remainingCount = (round.value.inventory[money.id] ?? 0) - (selected.value[money.id] ?? 0)
-    for (let index = 0; index < remainingCount; index++) {
+    const inventoryCount = round.value.inventory[money.id] ?? 0
+    for (let index = 0; index < inventoryCount; index++) {
+      const key = `${money.id}-${index}`
+      if (pickedPieceKeys.value[key]) continue
       const isBill = money.kind === 'bill'
       const groupIndex = isBill ? billDenominations.indexOf(money) : coinDenominations.indexOf(money)
-      const billColumn = groupIndex % 3
-      const billRow = Math.floor(groupIndex / 3)
+      const billAnchor = billAnchors[groupIndex] ?? { x: 300, y: 200 }
       pieces.push({
-        key: `${money.id}-${index}`,
+        key,
         money,
         index,
         x: isBill
-          ? 17 + billColumn * 33 + index * 0.8
-          : 12 + groupIndex * 25 + ((index * 9 + groupIndex * 3) % 11),
+          ? billAnchor.x + index * 13
+          : 230 + ((groupIndex * 283 + index * 97) % 1080),
         y: isBill
-          ? 19 + billRow * 27 + index * 1.25
-          : 78 + ((index * 7 + groupIndex * 5) % 12),
+          ? billAnchor.y + index * 9
+          : 165 + ((groupIndex * 151 + index * 109) % 610),
         rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
       })
     }
@@ -179,7 +199,31 @@ const currentHint = computed(() => {
 function adjust(money: Money, delta: number) {
   if (result.value === 'correct') return
   const current = selected.value[money.id] || 0
-  selected.value[money.id] = Math.max(0, Math.min(round.value.inventory[money.id] ?? 0, current + delta))
+  const target = Math.max(0, Math.min(round.value.inventory[money.id] ?? 0, current + delta))
+  if (target > current) {
+    for (let index = 0; index < (round.value.inventory[money.id] ?? 0) && selected.value[money.id] !== target; index++) {
+      const key = `${money.id}-${index}`
+      if (!pickedPieceKeys.value[key]) {
+        pickedPieceKeys.value[key] = true
+        selected.value[money.id] = (selected.value[money.id] ?? 0) + 1
+      }
+    }
+  } else if (target < current) {
+    for (let index = (round.value.inventory[money.id] ?? 0) - 1; index >= 0 && selected.value[money.id] !== target; index--) {
+      const key = `${money.id}-${index}`
+      if (pickedPieceKeys.value[key]) {
+        delete pickedPieceKeys.value[key]
+        selected.value[money.id] = (selected.value[money.id] ?? 0) - 1
+      }
+    }
+  }
+  result.value = 'idle'
+}
+
+function pickPiece(money: Money, key: string) {
+  if (pickedPieceKeys.value[key]) return
+  pickedPieceKeys.value[key] = true
+  selected.value[money.id] = (selected.value[money.id] ?? 0) + 1
   result.value = 'idle'
 }
 function checkAnswer() {
@@ -195,6 +239,8 @@ function checkAnswer() {
 }
 function resetSelection() {
   selected.value = {}
+  pickedPieceKeys.value = {}
+  pieceOffsets.value = {}
   result.value = 'idle'
   hintStep.value = 0
 }
@@ -254,7 +300,15 @@ function endDrag(event: PointerEvent) {
   if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 
   if (drag.source === 'table') {
-    if (!drag.moved || isPointInside(trayRef.value, event.clientX, event.clientY)) adjust(drag.money, 1)
+    if (!drag.moved || isPointInside(trayRef.value, event.clientX, event.clientY)) {
+      pickPiece(drag.money, drag.key)
+    } else {
+      const currentOffset = pieceOffsets.value[drag.key] ?? { x: 0, y: 0 }
+      pieceOffsets.value[drag.key] = {
+        x: currentOffset.x + drag.dx,
+        y: currentOffset.y + drag.dy,
+      }
+    }
   } else if (!drag.moved || isPointInside(tableRef.value, event.clientX, event.clientY)) {
     adjust(drag.money, -1)
   }
@@ -267,16 +321,43 @@ function cancelDrag() {
 
 function pieceStyle(piece: WalletPiece) {
   const drag = dragState.value?.key === piece.key ? dragState.value : null
+  const offset = pieceOffsets.value[piece.key] ?? { x: 0, y: 0 }
   const coinScale = piece.money.kind === 'coin' ? (piece.money.diameter ?? 24.26) / 24.26 : 1
   return {
-    '--piece-x': `${piece.x}%`,
-    '--piece-y': `${piece.y}%`,
+    '--piece-x': `${piece.x + offset.x}px`,
+    '--piece-y': `${piece.y + offset.y}px`,
     '--piece-rotation': `${piece.rotation}deg`,
     '--drag-x': `${drag?.dx ?? 0}px`,
     '--drag-y': `${drag?.dy ?? 0}px`,
     '--coin-scale': coinScale,
     '--piece-z': drag ? 100 : piece.index + 1,
   }
+}
+
+function beginPan(event: PointerEvent) {
+  if (event.button !== 0 || !tableRef.value) return
+  const target = event.currentTarget as HTMLElement
+  target.setPointerCapture(event.pointerId)
+  panState.value = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    scrollLeft: tableRef.value.scrollLeft,
+    scrollTop: tableRef.value.scrollTop,
+  }
+}
+
+function movePan(event: PointerEvent) {
+  if (!panState.value || !tableRef.value || panState.value.pointerId !== event.pointerId) return
+  tableRef.value.scrollLeft = panState.value.scrollLeft - (event.clientX - panState.value.startX)
+  tableRef.value.scrollTop = panState.value.scrollTop - (event.clientY - panState.value.startY)
+}
+
+function endPan(event: PointerEvent) {
+  if (!panState.value || panState.value.pointerId !== event.pointerId) return
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
+  panState.value = null
 }
 </script>
 
@@ -330,45 +411,52 @@ function pieceStyle(piece: WalletPiece) {
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
           </div>
 
-          <div ref="tableRef" class="money-table" :class="{ 'is-dragging': dragState?.source === 'table' }">
-            <div class="table-grain"></div>
-            <div class="table-instruction">
-              <Hand :size="16" />
-              <span><strong>Pick up the money</strong>Drag it to the cash tray, or tap once.</span>
-            </div>
-            <div class="table-label bills-label">BILLS · ALL THE SAME REAL-WORLD SIZE</div>
-            <div class="table-label coins-label">COINS · TRUE RELATIVE SIZE</div>
-            <div class="coin-size-key">
-              <span v-for="money in denominations.filter((item) => item.kind === 'coin')" :key="money.id">
-                <i :style="{ width: `${((money.diameter ?? 24.26) / 24.26) * 17}px`, height: `${((money.diameter ?? 24.26) / 24.26) * 17}px` }"></i>
-                {{ money.shortName }}
-              </span>
-            </div>
-
-            <button
-              v-for="piece in walletPieces"
-              :key="piece.key"
-              :class="[
-                'physical-money',
-                `kind-${piece.money.kind}`,
-                piece.money.id,
-                { dragging: dragState?.key === piece.key },
-              ]"
-              :style="pieceStyle(piece)"
-              :aria-label="`Pick up one ${piece.money.name}`"
-              @pointerdown.prevent="beginDrag($event, piece.money, piece.key, 'table')"
-              @pointermove.prevent="moveDrag"
-              @pointerup.prevent="endDrag"
-              @pointercancel="cancelDrag"
-              @keydown.enter.prevent="adjust(piece.money, 1)"
-              @keydown.space.prevent="adjust(piece.money, 1)"
+          <div class="canvas-help">
+            <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the tray</span>
+            <span><Move :size="15" /><strong>Drag the wood</strong> to move around the table</span>
+          </div>
+          <div ref="tableRef" class="money-table" :class="{ panning: panState }">
+            <div
+              class="table-canvas"
+              @pointerdown.prevent="beginPan"
+              @pointermove.prevent="movePan"
+              @pointerup.prevent="endPan"
+              @pointercancel="endPan"
             >
-              <img :src="piece.money.image" :alt="piece.money.name" draggable="false">
-              <span class="money-value-badge">{{ piece.money.shortName }}</span>
-            </button>
+              <div class="table-grain"></div>
+              <div class="table-label scale-label">ONE SHARED PHYSICAL SCALE · BILLS AND COINS MAY OVERLAP</div>
+              <div class="coin-size-key">
+                <span v-for="money in coinDenominations" :key="money.id">
+                  <i :style="{ width: `${((money.diameter ?? 24.26) / 24.26) * 17}px`, height: `${((money.diameter ?? 24.26) / 24.26) * 17}px` }"></i>
+                  {{ money.shortName }}
+                </span>
+              </div>
 
-            <div v-if="!walletPieces.length" class="table-empty">
-              <Check :size="22" /><strong>Everything is in your tray</strong>
+              <button
+                v-for="piece in walletPieces"
+                :key="piece.key"
+                :class="[
+                  'physical-money',
+                  `kind-${piece.money.kind}`,
+                  piece.money.id,
+                  { dragging: dragState?.key === piece.key },
+                ]"
+                :style="pieceStyle(piece)"
+                :aria-label="`Pick up one ${piece.money.name}`"
+                @pointerdown.stop.prevent="beginDrag($event, piece.money, piece.key, 'table')"
+                @pointermove.stop.prevent="moveDrag"
+                @pointerup.stop.prevent="endDrag"
+                @pointercancel.stop="cancelDrag"
+                @keydown.enter.prevent="adjust(piece.money, 1)"
+                @keydown.space.prevent="adjust(piece.money, 1)"
+              >
+                <img :src="piece.money.image" :alt="piece.money.name" draggable="false">
+                <span class="money-value-badge">{{ piece.money.shortName }}</span>
+              </button>
+
+              <div v-if="!walletPieces.length" class="table-empty">
+                <Check :size="22" /><strong>Everything is in your tray</strong>
+              </div>
             </div>
           </div>
 
