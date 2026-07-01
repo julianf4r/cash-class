@@ -56,6 +56,7 @@ type Round = {
   optimalCount: number
   optimalSelection: Record<string, number>
   layoutSeed: number
+  generation?: number
 }
 
 const quarterBackVariants: MoneyBackVariant[] = [
@@ -167,23 +168,23 @@ function loadProgress(): PersistedProgress | null {
 }
 
 const savedProgress = loadProgress()
-const hasLegacyLimitedRound = savedProgress?.level === 4
-  && (savedProgress.round.inventory.quarter ?? 0) === 0
+const hasStaleLimitedRound = savedProgress?.level === 4
+  && savedProgress.round.generation !== 2
 const level = ref(savedProgress?.level ?? 1)
 const score = ref(savedProgress?.score ?? 0)
 const streak = ref(savedProgress?.streak ?? 0)
 const solved = ref(savedProgress?.solved ?? 0)
-const selected = ref<Record<string, number>>(hasLegacyLimitedRound ? {} : (savedProgress?.selected ?? {}))
-const result = ref<Result>(hasLegacyLimitedRound ? 'idle' : (savedProgress?.result ?? 'idle'))
-const hintStep = ref(hasLegacyLimitedRound ? 0 : (savedProgress?.hintStep ?? 0))
+const selected = ref<Record<string, number>>(hasStaleLimitedRound ? {} : (savedProgress?.selected ?? {}))
+const result = ref<Result>(hasStaleLimitedRound ? 'idle' : (savedProgress?.result ?? 'idle'))
+const hintStep = ref(hasStaleLimitedRound ? 0 : (savedProgress?.hintStep ?? 0))
 const showGuide = ref(false)
 const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
 const panState = ref<PanState | null>(null)
-const pieceOffsets = ref<Record<string, { x: number; y: number }>>(hasLegacyLimitedRound ? {} : (savedProgress?.pieceOffsets ?? {}))
-const pieceLayers = ref<Record<string, number>>(hasLegacyLimitedRound ? {} : (savedProgress?.pieceLayers ?? {}))
-const pickedPieceKeys = ref<Record<string, boolean>>(hasLegacyLimitedRound ? {} : (savedProgress?.pickedPieceKeys ?? {}))
-const flippedFaces = ref<Record<string, 'front' | 'back'>>(hasLegacyLimitedRound ? {} : (savedProgress?.flippedFaces ?? {}))
+const pieceOffsets = ref<Record<string, { x: number; y: number }>>(hasStaleLimitedRound ? {} : (savedProgress?.pieceOffsets ?? {}))
+const pieceLayers = ref<Record<string, number>>(hasStaleLimitedRound ? {} : (savedProgress?.pieceLayers ?? {}))
+const pickedPieceKeys = ref<Record<string, boolean>>(hasStaleLimitedRound ? {} : (savedProgress?.pickedPieceKeys ?? {}))
+const flippedFaces = ref<Record<string, 'front' | 'back'>>(hasStaleLimitedRound ? {} : (savedProgress?.flippedFaces ?? {}))
 const coinPreview = ref<CoinPreview | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
 const tableCanvasRef = ref<HTMLElement | null>(null)
@@ -231,25 +232,6 @@ function solveBounded(target: number, inventory: Record<string, number>) {
   return { count: dp[target], selection: paths[target] || {} }
 }
 
-function solveUnbounded(target: number) {
-  const unreachable = 9999
-  const dp = Array(target + 1).fill(unreachable)
-  const paths: Array<Record<string, number> | null> = Array(target + 1).fill(null)
-  dp[0] = 0
-  paths[0] = {}
-  for (let amount = 1; amount <= target; amount++) {
-    for (const money of denominations) {
-      if (money.value > amount || dp[amount - money.value] + 1 >= dp[amount]) continue
-      dp[amount] = dp[amount - money.value] + 1
-      paths[amount] = {
-        ...paths[amount - money.value],
-        [money.id]: (paths[amount - money.value]?.[money.id] || 0) + 1,
-      }
-    }
-  }
-  return { count: dp[target], selection: paths[target] || {} }
-}
-
 function randomInteger(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
@@ -272,15 +254,13 @@ function makeLimitedWalletRound(): Round {
     const availableAnswer = solveBounded(target, inventory)
     if (availableAnswer.count >= 9999 || availableAnswer.count > 16) continue
 
-    const theoreticalAnswer = solveUnbounded(target)
-    if (availableAnswer.count <= theoreticalAnswer.count) continue
-
     return {
       target,
       inventory,
       optimalCount: availableAnswer.count,
       optimalSelection: availableAnswer.selection,
       layoutSeed: Math.floor(Math.random() * 1_000_000_000),
+      generation: 2,
     }
   }
 
@@ -304,6 +284,7 @@ function makeLimitedWalletRound(): Round {
     optimalCount: availableAnswer.count,
     optimalSelection: availableAnswer.selection,
     layoutSeed: Math.floor(Math.random() * 1_000_000_000),
+    generation: 2,
   }
 }
 
@@ -379,7 +360,7 @@ function makeRound(difficulty: number): Round {
 }
 
 const round = ref<Round>(
-  savedProgress && !hasLegacyLimitedRound ? savedProgress.round : makeRound(level.value),
+  savedProgress && !hasStaleLimitedRound ? savedProgress.round : makeRound(level.value),
 )
 const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + (selected.value[money.id] || 0) * money.value, 0))
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
@@ -560,7 +541,7 @@ const feedback = computed(() => {
   }
   if (result.value === 'correct') {
     return level.value === 4
-      ? `Exact payment! A different combination was needed with this limited wallet.`
+      ? `Exact payment! In this level, the correct total matters more than the piece count.`
       : `Perfect! ${selectedCount.value} pieces is the fewest possible.`
   }
   return ''
