@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import {
-  ArrowRight, Check, ChevronDown, CircleHelp, Lightbulb, Minus, Plus,
+  ArrowRight, Check, ChevronDown, CircleHelp, Hand, Lightbulb,
   RotateCcw, Sparkles, Trophy, X, Zap,
 } from '@lucide/vue'
+import bill1Url from './assets/money/bill-1.jpg'
+import bill5Url from './assets/money/bill-5.jpg'
+import bill10Url from './assets/money/bill-10.jpg'
+import bill20Url from './assets/money/bill-20.jpg'
+import pennyUrl from './assets/money/penny.jpg'
+import nickelUrl from './assets/money/nickel.jpg'
+import dimeUrl from './assets/money/dime.png'
+import quarterUrl from './assets/money/quarter.jpg'
 
 type Money = {
   id: string
@@ -13,6 +21,8 @@ type Money = {
   kind: 'bill' | 'coin'
   portrait: string
   fact: string
+  image: string
+  diameter?: number
 }
 type Round = {
   target: number
@@ -22,15 +32,36 @@ type Round = {
 }
 
 const denominations: Money[] = [
-  { id: 'twenty', name: 'Twenty-dollar bill', shortName: '$20', value: 2000, kind: 'bill', portrait: 'JACKSON', fact: 'Andrew Jackson appears on the $20 bill.' },
-  { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.' },
-  { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.' },
-  { id: 'one', name: 'One-dollar bill', shortName: '$1', value: 100, kind: 'bill', portrait: 'WASHINGTON', fact: 'The $1 bill features George Washington.' },
-  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar.' },
-  { id: 'dime', name: 'Dime', shortName: '10¢', value: 10, kind: 'coin', portrait: 'DIME', fact: 'The dime is worth 10¢, even though it is the smallest U.S. coin.' },
-  { id: 'nickel', name: 'Nickel', shortName: '5¢', value: 5, kind: 'coin', portrait: 'NICKEL', fact: 'A nickel is worth 5¢ and is larger than a dime.' },
-  { id: 'penny', name: 'Penny', shortName: '1¢', value: 1, kind: 'coin', portrait: 'PENNY', fact: 'One hundred pennies make one dollar.' },
+  { id: 'twenty', name: 'Twenty-dollar bill', shortName: '$20', value: 2000, kind: 'bill', portrait: 'JACKSON', fact: 'Andrew Jackson appears on the $20 bill.', image: bill20Url },
+  { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.', image: bill10Url },
+  { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.', image: bill5Url },
+  { id: 'one', name: 'One-dollar bill', shortName: '$1', value: 100, kind: 'bill', portrait: 'WASHINGTON', fact: 'The $1 bill features George Washington.', image: bill1Url },
+  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar.', image: quarterUrl, diameter: 24.26 },
+  { id: 'dime', name: 'Dime', shortName: '10¢', value: 10, kind: 'coin', portrait: 'DIME', fact: 'The dime is worth 10¢, even though it is the smallest U.S. coin.', image: dimeUrl, diameter: 17.91 },
+  { id: 'nickel', name: 'Nickel', shortName: '5¢', value: 5, kind: 'coin', portrait: 'NICKEL', fact: 'A nickel is worth 5¢ and is larger than a dime.', image: nickelUrl, diameter: 21.21 },
+  { id: 'penny', name: 'Penny', shortName: '1¢', value: 1, kind: 'coin', portrait: 'PENNY', fact: 'One hundred pennies make one dollar.', image: pennyUrl, diameter: 19.05 },
 ]
+
+type WalletPiece = {
+  key: string
+  money: Money
+  index: number
+  x: number
+  y: number
+  rotation: number
+}
+
+type DragState = {
+  key: string
+  money: Money
+  source: 'table' | 'tray'
+  pointerId: number
+  startX: number
+  startY: number
+  dx: number
+  dy: number
+  moved: boolean
+}
 
 const level = ref(1)
 const score = ref(0)
@@ -41,6 +72,9 @@ const result = ref<'idle' | 'short' | 'over' | 'correct' | 'not-optimal'>('idle'
 const hintStep = ref(0)
 const showGuide = ref(false)
 const showLevelMenu = ref(false)
+const dragState = ref<DragState | null>(null)
+const tableRef = ref<HTMLElement | null>(null)
+const trayRef = ref<HTMLElement | null>(null)
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -97,9 +131,30 @@ const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + 
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
 const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
-const bills = computed(() => denominations.filter((item) => item.kind === 'bill'))
-const coins = computed(() => denominations.filter((item) => item.kind === 'coin'))
 const currentTip = computed(() => denominations[(solved.value + level.value) % denominations.length]?.fact ?? '')
+const walletPieces = computed<WalletPiece[]>(() => {
+  const pieces: WalletPiece[] = []
+  denominations.forEach((money, denominationIndex) => {
+    const remainingCount = (round.value.inventory[money.id] ?? 0) - (selected.value[money.id] ?? 0)
+    for (let index = 0; index < remainingCount; index++) {
+      const isBill = money.kind === 'bill'
+      const groupIndex = isBill ? denominationIndex : denominationIndex - 4
+      pieces.push({
+        key: `${money.id}-${index}`,
+        money,
+        index,
+        x: isBill
+          ? 13 + groupIndex * 24 + index * 1.2
+          : 12 + groupIndex * 24 + ((index * 11 + groupIndex * 3) % 13),
+        y: isBill
+          ? 22 + index * 2.2
+          : 70 + ((index * 9 + groupIndex * 5) % 17),
+        rotation: ((index * 7 + denominationIndex * 5) % 11) - 5,
+      })
+    }
+  })
+  return pieces
+})
 const feedback = computed(() => {
   if (result.value === 'short') return `You're ${formatMoney(remaining.value)} short. Keep going!`
   if (result.value === 'over') return `That's ${formatMoney(Math.abs(remaining.value))} too much.`
@@ -150,6 +205,70 @@ function changeLevel(next: number) {
 function useHint() {
   hintStep.value += 1
   result.value = 'idle'
+}
+
+function isPointInside(element: HTMLElement | null, x: number, y: number) {
+  if (!element) return false
+  const rect = element.getBoundingClientRect()
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+}
+
+function beginDrag(event: PointerEvent, money: Money, key: string, source: 'table' | 'tray') {
+  if (result.value === 'correct' || event.button !== 0) return
+  const target = event.currentTarget as HTMLElement
+  target.setPointerCapture(event.pointerId)
+  dragState.value = {
+    key,
+    money,
+    source,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    dx: 0,
+    dy: 0,
+    moved: false,
+  }
+}
+
+function moveDrag(event: PointerEvent) {
+  if (!dragState.value || dragState.value.pointerId !== event.pointerId) return
+  const dx = event.clientX - dragState.value.startX
+  const dy = event.clientY - dragState.value.startY
+  dragState.value.dx = dx
+  dragState.value.dy = dy
+  dragState.value.moved = dragState.value.moved || Math.hypot(dx, dy) > 7
+}
+
+function endDrag(event: PointerEvent) {
+  const drag = dragState.value
+  if (!drag || drag.pointerId !== event.pointerId) return
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
+
+  if (drag.source === 'table') {
+    if (!drag.moved || isPointInside(trayRef.value, event.clientX, event.clientY)) adjust(drag.money, 1)
+  } else if (!drag.moved || isPointInside(tableRef.value, event.clientX, event.clientY)) {
+    adjust(drag.money, -1)
+  }
+  dragState.value = null
+}
+
+function cancelDrag() {
+  dragState.value = null
+}
+
+function pieceStyle(piece: WalletPiece) {
+  const drag = dragState.value?.key === piece.key ? dragState.value : null
+  const coinScale = piece.money.kind === 'coin' ? (piece.money.diameter ?? 24.26) / 24.26 : 1
+  return {
+    '--piece-x': `${piece.x}%`,
+    '--piece-y': `${piece.y}%`,
+    '--piece-rotation': `${piece.rotation}deg`,
+    '--drag-x': `${drag?.dx ?? 0}px`,
+    '--drag-y': `${drag?.dy ?? 0}px`,
+    '--coin-scale': coinScale,
+    '--piece-z': drag ? 100 : piece.index + 1,
+  }
 }
 </script>
 
@@ -203,48 +322,59 @@ function useHint() {
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
           </div>
 
-          <div class="money-section">
-            <h2><span>BILLS</span><i></i></h2>
-            <div class="bills-grid">
-              <article v-for="money in bills" :key="money.id" class="money-option">
-                <button class="bill" :class="{ selected: selected[money.id] }" @click="adjust(money, 1)">
-                  <span class="bill-value left">{{ money.shortName }}</span>
-                  <span class="bill-seal">$</span>
-                  <span class="portrait">{{ money.portrait }}</span>
-                  <span class="bill-value right">{{ money.shortName }}</span>
-                </button>
-                <div class="money-meta">
-                  <span><strong>{{ money.shortName }}</strong><small>{{ round.inventory[money.id] }} available</small></span>
-                  <div class="counter">
-                    <button :disabled="!selected[money.id]" @click="adjust(money, -1)"><Minus :size="13" /></button>
-                    <b>{{ selected[money.id] || 0 }}</b>
-                    <button :disabled="(selected[money.id] ?? 0) >= (round.inventory[money.id] ?? 0)" @click="adjust(money, 1)"><Plus :size="13" /></button>
-                  </div>
-                </div>
-              </article>
+          <div ref="tableRef" class="money-table" :class="{ 'is-dragging': dragState?.source === 'table' }">
+            <div class="table-grain"></div>
+            <div class="table-instruction">
+              <Hand :size="16" />
+              <span><strong>Pick up the money</strong>Drag it to the cash tray, or tap once.</span>
+            </div>
+            <div class="table-label bills-label">BILLS · SAME REAL-WORLD SIZE</div>
+            <div class="table-label coins-label">COINS · TRUE RELATIVE SIZE</div>
+            <div class="coin-size-key">
+              <span v-for="money in denominations.filter((item) => item.kind === 'coin')" :key="money.id">
+                <i :style="{ width: `${((money.diameter ?? 24.26) / 24.26) * 17}px`, height: `${((money.diameter ?? 24.26) / 24.26) * 17}px` }"></i>
+                {{ money.shortName }}
+              </span>
+            </div>
+
+            <button
+              v-for="piece in walletPieces"
+              :key="piece.key"
+              :class="[
+                'physical-money',
+                `kind-${piece.money.kind}`,
+                piece.money.id,
+                { dragging: dragState?.key === piece.key },
+              ]"
+              :style="pieceStyle(piece)"
+              :aria-label="`Pick up one ${piece.money.name}`"
+              @pointerdown.prevent="beginDrag($event, piece.money, piece.key, 'table')"
+              @pointermove.prevent="moveDrag"
+              @pointerup.prevent="endDrag"
+              @pointercancel="cancelDrag"
+              @keydown.enter.prevent="adjust(piece.money, 1)"
+              @keydown.space.prevent="adjust(piece.money, 1)"
+            >
+              <img :src="piece.money.image" :alt="piece.money.name" draggable="false">
+              <span class="money-value-badge">{{ piece.money.shortName }}</span>
+            </button>
+
+            <div v-if="!walletPieces.length" class="table-empty">
+              <Check :size="22" /><strong>Everything is in your tray</strong>
             </div>
           </div>
 
-          <div class="money-section coins-section">
-            <h2><span>COINS</span><i></i></h2>
-            <div class="coins-grid">
-              <article v-for="money in coins" :key="money.id" class="money-option coin-option">
-                <button class="coin" :class="[money.id, { selected: selected[money.id] }]" @click="adjust(money, 1)">
-                  <span class="coin-face">{{ money.shortName }}</span>
-                </button>
-                <div class="coin-name"><strong>{{ money.shortName }}</strong><small>{{ money.name }}</small></div>
-                <div class="counter coin-counter">
-                  <button :disabled="!selected[money.id]" @click="adjust(money, -1)"><Minus :size="13" /></button>
-                  <b>{{ selected[money.id] || 0 }}</b>
-                  <button :disabled="(selected[money.id] ?? 0) >= (round.inventory[money.id] ?? 0)" @click="adjust(money, 1)"><Plus :size="13" /></button>
-                </div>
-                <small class="available">{{ round.inventory[money.id] }} available</small>
-              </article>
+          <div class="wallet-legend">
+            <div v-for="money in denominations" :key="money.id">
+              <span :class="['legend-swatch', money.kind, money.id]">
+                <img :src="money.image" alt="" draggable="false">
+              </span>
+              <span><strong>{{ money.shortName }} · {{ money.name.replace('-dollar bill', ' bill') }}</strong><small>{{ (round.inventory[money.id] ?? 0) - (selected[money.id] ?? 0) }} left on table</small></span>
             </div>
           </div>
         </div>
 
-        <aside class="tray-panel">
+        <aside ref="trayRef" class="tray-panel" :class="{ 'drop-ready': dragState?.source === 'table' }">
           <div class="panel-heading compact">
             <div><span class="step-number">2</span><span><small>YOUR ANSWER</small><strong>Cash tray</strong></span></div>
           </div>
@@ -260,16 +390,27 @@ function useHint() {
 
           <div v-if="selectedCount" class="tray-items">
             <div v-for="money in denominations.filter((item) => selected[item.id])" :key="money.id" class="tray-row">
-              <span :class="['mini-money', money.kind, money.id]">{{ money.shortName }}</span>
+              <button
+                :class="['mini-money', money.kind, money.id, { dragging: dragState?.key === `tray-${money.id}` }]"
+                :aria-label="`Return one ${money.name} to the table`"
+                @pointerdown.prevent="beginDrag($event, money, `tray-${money.id}`, 'tray')"
+                @pointermove.prevent="moveDrag"
+                @pointerup.prevent="endDrag"
+                @pointercancel="cancelDrag"
+                @keydown.enter.prevent="adjust(money, -1)"
+                @keydown.space.prevent="adjust(money, -1)"
+              >
+                <img :src="money.image" alt="" draggable="false">
+              </button>
               <span><strong>{{ money.name }}</strong><small>{{ selected[money.id] }} × {{ money.shortName }}</small></span>
               <b>{{ formatMoney((selected[money.id] ?? 0) * money.value) }}</b>
               <button @click="adjust(money, -(selected[money.id] ?? 0))"><X :size="14" /></button>
             </div>
           </div>
           <div v-else class="empty-tray">
-            <span><Plus :size="22" /></span>
-            <strong>Your tray is empty</strong>
-            <p>Tap bills or coins to add them here.</p>
+            <span><Hand :size="22" /></span>
+            <strong>Drop money here</strong>
+            <p>Drag from the table or tap a piece.</p>
           </div>
 
           <div v-if="feedback" :class="['feedback', result]">
@@ -303,7 +444,11 @@ function useHint() {
       </section>
     </main>
 
-    <footer><span>CashClass</span> · Learn money by doing <button @click="showGuide = true">Money guide</button></footer>
+    <footer>
+      <span>CashClass</span> · Learn money by doing
+      <button @click="showGuide = true">Money guide</button>
+      <small>Educational bill art: U.S. Currency Education Program · Coin imagery: U.S. Mint public-domain works</small>
+    </footer>
 
     <div v-if="showGuide" class="modal-backdrop" @click.self="showGuide = false">
       <section class="guide-modal">
@@ -313,7 +458,7 @@ function useHint() {
         <p>Remember each name and value. The size of a coin does not always tell you what it is worth.</p>
         <div class="guide-list">
           <article v-for="money in denominations" :key="money.id">
-            <span :class="['guide-token', money.kind, money.id]">{{ money.shortName }}</span>
+            <span :class="['guide-token', money.kind, money.id]"><img :src="money.image" alt="" draggable="false"></span>
             <span><strong>{{ money.name }}</strong><small>{{ money.fact }}</small></span>
           </article>
         </div>
