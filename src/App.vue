@@ -721,7 +721,6 @@ function endPan(event: PointerEvent) {
           <RotateCcw :size="16" /><span>Reset progress</span>
         </button>
         <button class="icon-button" aria-label="Open money guide" @click="showGuide = true"><CircleHelp :size="20" /></button>
-        <div class="avatar">JD</div>
       </div>
     </header>
 
