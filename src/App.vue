@@ -42,6 +42,7 @@ type Round = {
   inventory: Record<string, number>
   optimalCount: number
   optimalSelection: Record<string, number>
+  layoutSeed: number
 }
 
 const denominations: Money[] = [
@@ -213,7 +214,13 @@ function makeRound(difficulty: number): Round {
   const cents = centPatterns[Math.floor(Math.random() * centPatterns.length)] ?? 25
   const target = scenario.dollars * 100 + cents
   const answer = solveBounded(target, inventory)
-  return { target, inventory, optimalCount: answer.count, optimalSelection: answer.selection }
+  return {
+    target,
+    inventory,
+    optimalCount: answer.count,
+    optimalSelection: answer.selection,
+    layoutSeed: Math.floor(Math.random() * 1_000_000_000),
+  }
 }
 
 const round = ref<Round>(makeRound(level.value))
@@ -223,11 +230,19 @@ const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
 const currentTip = computed(() => quarterTips[(solved.value + level.value - 1) % quarterTips.length] ?? '')
 
+function seededNumber(seedText: string) {
+  let hash = 2166136261
+  for (const character of seedText) {
+    hash ^= character.charCodeAt(0)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0) / 4294967296
+}
+
 function seededFace(key: string) {
-  const seedText = `${round.value.target}-${level.value}-${key}`
-  const seed = [...seedText].reduce((sum, character) => sum + character.charCodeAt(0), 0)
-  if (level.value === 1) return seed % 4 === 0 ? 'front' : 'back'
-  return seed % 2 === 0 ? 'front' : 'back'
+  const seed = seededNumber(`${round.value.layoutSeed}-${level.value}-${key}-face`)
+  if (level.value === 1) return seed < 0.25 ? 'front' : 'back'
+  return seed < 0.5 ? 'front' : 'back'
 }
 
 function pieceFace(piece: WalletPiece) {
@@ -260,17 +275,18 @@ function makeWalletPiece(money: Money, index: number): WalletPiece {
         .findIndex((item) => item.id === money.id)
     : coinDenominations.findIndex((item) => item.id === money.id)
   const billAnchor = billAnchors[groupIndex] ?? { x: 300, y: 200 }
+  const positionSeed = `${round.value.layoutSeed}-${money.id}-${index}`
   return {
     key: `${money.id}-${index}`,
     money,
     index,
     x: isBill
       ? billAnchor.x + index * 13
-      : 230 + ((groupIndex * 283 + index * 97) % 1080),
+      : 150 + Math.round(seededNumber(`${positionSeed}-x`) * 700),
     y: isBill
       ? billAnchor.y + index * 9
-      : 165 + ((groupIndex * 151 + index * 109) % 610),
-    rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
+      : 150 + Math.round(seededNumber(`${positionSeed}-y`) * 760),
+    rotation: Math.round(seededNumber(`${positionSeed}-rotation`) * 16) - 8,
   }
 }
 
