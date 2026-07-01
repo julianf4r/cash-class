@@ -104,6 +104,7 @@ const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
 const panState = ref<PanState | null>(null)
 const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
+const pieceLayers = ref<Record<string, number>>({})
 const pickedPieceKeys = ref<Record<string, boolean>>({})
 const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
 const coinPreview = ref<CoinPreview | null>(null)
@@ -111,6 +112,7 @@ const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
 const coinDenominations = denominations.filter((item) => item.kind === 'coin')
+let nextPieceLayer = 100
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -287,6 +289,17 @@ function pickPiece(money: Money, key: string) {
   result.value = 'idle'
 }
 
+function bringPieceToFront(key: string) {
+  if (nextPieceLayer >= 250) {
+    const orderedKeys = Object.entries(pieceLayers.value)
+      .sort(([, layerA], [, layerB]) => layerA - layerB)
+      .map(([pieceKey]) => pieceKey)
+    pieceLayers.value = Object.fromEntries(orderedKeys.map((pieceKey, index) => [pieceKey, index + 100]))
+    nextPieceLayer = 100 + orderedKeys.length
+  }
+  pieceLayers.value[key] = ++nextPieceLayer
+}
+
 function returnPiece(money: Money, key: string) {
   if (!pickedPieceKeys.value[key]) return
   delete pickedPieceKeys.value[key]
@@ -308,6 +321,8 @@ function resetSelection() {
   selected.value = {}
   pickedPieceKeys.value = {}
   pieceOffsets.value = {}
+  pieceLayers.value = {}
+  nextPieceLayer = 100
   flippedFaces.value = {}
   result.value = 'idle'
   hintStep.value = 0
@@ -390,7 +405,7 @@ function endDrag(event: PointerEvent) {
 
   if (drag.source === 'table') {
     if (!drag.moved) {
-      pickPiece(drag.money, drag.key)
+      bringPieceToFront(drag.key)
     } else if (isPointInside(trayRef.value, event.clientX, event.clientY)) {
       pickPiece(drag.money, drag.key)
     } else {
@@ -399,6 +414,7 @@ function endDrag(event: PointerEvent) {
         x: currentOffset.x + drag.dx,
         y: currentOffset.y + drag.dy,
       }
+      bringPieceToFront(drag.key)
     }
   } else if (
     !drag.moved ||
@@ -425,7 +441,7 @@ function pieceStyle(piece: WalletPiece) {
     '--drag-x': `${drag?.dx ?? 0}px`,
     '--drag-y': `${drag?.dy ?? 0}px`,
     '--coin-scale': coinScale,
-    '--piece-z': drag ? 100 : piece.index + 1,
+    '--piece-z': drag ? 280 : (pieceLayers.value[piece.key] ?? piece.index + 1),
   }
 }
 
@@ -516,7 +532,8 @@ function endPan(event: PointerEvent) {
           </div>
 
           <div class="canvas-help">
-            <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the payment area</span>
+            <span><Hand :size="16" /><strong>Click</strong> to bring forward · <strong>Double-click</strong> to pay</span>
+            <span><Hand :size="15" /><strong>Drag money</strong> to move it or drop it in the payment area</span>
             <span><Move :size="15" /><strong>Drag the wood</strong> to move around the table</span>
             <span><RotateCcw :size="14" /><strong>Right-click</strong> a piece to flip it</span>
           </div>
@@ -558,6 +575,7 @@ function endPan(event: PointerEvent) {
                 @pointerleave="hideCoinPreview(piece.key)"
                 @pointerup.stop.prevent="endDrag"
                 @pointercancel.stop="cancelDrag"
+                @dblclick.stop.prevent="pickPiece(piece.money, piece.key)"
                 @contextmenu.stop.prevent="flipPiece(piece.key)"
                 @keydown.enter.prevent="adjust(piece.money, 1)"
                 @keydown.space.prevent="adjust(piece.money, 1)"
