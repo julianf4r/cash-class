@@ -236,6 +236,15 @@ function seededNumber(seedText: string) {
     hash ^= character.charCodeAt(0)
     hash = Math.imul(hash, 16777619)
   }
+
+  // FNV alone leaves similar seeds (such as the x/y coordinate suffixes)
+  // correlated. Avalanche the result so each coordinate varies independently.
+  hash ^= hash >>> 16
+  hash = Math.imul(hash, 0x85ebca6b)
+  hash ^= hash >>> 13
+  hash = Math.imul(hash, 0xc2b2ae35)
+  hash ^= hash >>> 16
+
   return (hash >>> 0) / 4294967296
 }
 
