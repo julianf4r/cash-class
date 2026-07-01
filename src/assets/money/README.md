@@ -12,7 +12,9 @@ Education Program's official current-note feature sheets:
 - [$50 Note Issued 2004 to Present](https://www.uscurrency.gov/sites/default/files/downloadable-materials/files/en/50-2004-present-features-en.pdf)
 - [$100 Note Issued 2013 to Present](https://www.uscurrency.gov/sites/default/files/downloadable-materials/files/en/100-2013-present-features-en.pdf)
 
-The official `SPECIMEN` overlays are intentionally preserved.
+The matching reverse images were extracted from the same sheets. The official
+`SPECIMEN` overlays are intentionally preserved, and the app displays only one
+side of a note at a time.
 
 ## Coins
 
@@ -24,5 +26,11 @@ U.S. government works. Local copies were downloaded through Wikimedia Commons:
 - `dime.png`: 2013 Roosevelt dime obverse
 - `quarter.jpg`: 2021-P Washington quarter obverse
 
-The application displays only one side of each coin and uses the official
-diameters published by the U.S. Mint.
+Reverse images:
+
+- `nickel-back.png`: U.S. Mint 2013 Monticello reverse, public domain
+- `dime-back.png`: U.S. Mint 2013 torch reverse, public domain
+- `quarter-back.jpg`: U.S. Mint 2021 Washington Crossing the Delaware reverse, public domain
+- `penny-back.png`: 2023 Union Shield penny photograph by Wikimedia Commons user MisfitMaid, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+The application uses the official coin diameters published by the U.S. Mint.

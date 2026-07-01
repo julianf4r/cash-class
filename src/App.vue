@@ -5,15 +5,25 @@ import {
   RotateCcw, Trophy, X, Zap,
 } from '@lucide/vue'
 import bill1Url from './assets/money/bill-1.jpg'
+import bill1BackUrl from './assets/money/bill-1-back.jpg'
 import bill5Url from './assets/money/bill-5.jpg'
+import bill5BackUrl from './assets/money/bill-5-back.jpg'
 import bill10Url from './assets/money/bill-10.jpg'
+import bill10BackUrl from './assets/money/bill-10-back.jpg'
 import bill20Url from './assets/money/bill-20.jpg'
+import bill20BackUrl from './assets/money/bill-20-back.jpg'
 import bill50Url from './assets/money/bill-50.jpg'
+import bill50BackUrl from './assets/money/bill-50-back.jpg'
 import bill100Url from './assets/money/bill-100.jpg'
+import bill100BackUrl from './assets/money/bill-100-back.jpg'
 import pennyUrl from './assets/money/penny.jpg'
+import pennyBackUrl from './assets/money/penny-back.png'
 import nickelUrl from './assets/money/nickel.jpg'
+import nickelBackUrl from './assets/money/nickel-back.png'
 import dimeUrl from './assets/money/dime.png'
+import dimeBackUrl from './assets/money/dime-back.png'
 import quarterUrl from './assets/money/quarter.jpg'
+import quarterBackUrl from './assets/money/quarter-back.jpg'
 
 type Money = {
   id: string
@@ -24,6 +34,7 @@ type Money = {
   portrait: string
   fact: string
   image: string
+  backImage: string
   diameter?: number
 }
 type Round = {
@@ -34,16 +45,16 @@ type Round = {
 }
 
 const denominations: Money[] = [
-  { id: 'hundred', name: 'One-hundred-dollar bill', shortName: '$100', value: 10000, kind: 'bill', portrait: 'FRANKLIN', fact: 'Benjamin Franklin appears on the $100 bill, although he was never president.', image: bill100Url },
-  { id: 'fifty', name: 'Fifty-dollar bill', shortName: '$50', value: 5000, kind: 'bill', portrait: 'GRANT', fact: 'President Ulysses S. Grant appears on the $50 bill.', image: bill50Url },
-  { id: 'twenty', name: 'Twenty-dollar bill', shortName: '$20', value: 2000, kind: 'bill', portrait: 'JACKSON', fact: 'Andrew Jackson appears on the $20 bill.', image: bill20Url },
-  { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.', image: bill10Url },
-  { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.', image: bill5Url },
-  { id: 'one', name: 'One-dollar bill', shortName: '$1', value: 100, kind: 'bill', portrait: 'WASHINGTON', fact: 'The $1 bill features George Washington.', image: bill1Url },
-  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar.', image: quarterUrl, diameter: 24.26 },
-  { id: 'dime', name: 'Dime', shortName: '10¢', value: 10, kind: 'coin', portrait: 'DIME', fact: 'The dime is worth 10¢, even though it is the smallest U.S. coin.', image: dimeUrl, diameter: 17.91 },
-  { id: 'nickel', name: 'Nickel', shortName: '5¢', value: 5, kind: 'coin', portrait: 'NICKEL', fact: 'A nickel is worth 5¢ and is larger than a dime.', image: nickelUrl, diameter: 21.21 },
-  { id: 'penny', name: 'Penny', shortName: '1¢', value: 1, kind: 'coin', portrait: 'PENNY', fact: 'One hundred pennies make one dollar.', image: pennyUrl, diameter: 19.05 },
+  { id: 'hundred', name: 'One-hundred-dollar bill', shortName: '$100', value: 10000, kind: 'bill', portrait: 'FRANKLIN', fact: 'Benjamin Franklin appears on the $100 bill, although he was never president.', image: bill100Url, backImage: bill100BackUrl },
+  { id: 'fifty', name: 'Fifty-dollar bill', shortName: '$50', value: 5000, kind: 'bill', portrait: 'GRANT', fact: 'President Ulysses S. Grant appears on the $50 bill.', image: bill50Url, backImage: bill50BackUrl },
+  { id: 'twenty', name: 'Twenty-dollar bill', shortName: '$20', value: 2000, kind: 'bill', portrait: 'JACKSON', fact: 'Andrew Jackson appears on the $20 bill.', image: bill20Url, backImage: bill20BackUrl },
+  { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.', image: bill10Url, backImage: bill10BackUrl },
+  { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.', image: bill5Url, backImage: bill5BackUrl },
+  { id: 'one', name: 'One-dollar bill', shortName: '$1', value: 100, kind: 'bill', portrait: 'WASHINGTON', fact: 'The $1 bill features George Washington.', image: bill1Url, backImage: bill1BackUrl },
+  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar.', image: quarterUrl, backImage: quarterBackUrl, diameter: 24.26 },
+  { id: 'dime', name: 'Dime', shortName: '10¢', value: 10, kind: 'coin', portrait: 'DIME', fact: 'The dime is worth 10¢, even though it is the smallest U.S. coin.', image: dimeUrl, backImage: dimeBackUrl, diameter: 17.91 },
+  { id: 'nickel', name: 'Nickel', shortName: '5¢', value: 5, kind: 'coin', portrait: 'NICKEL', fact: 'A nickel is worth 5¢ and is larger than a dime.', image: nickelUrl, backImage: nickelBackUrl, diameter: 21.21 },
+  { id: 'penny', name: 'Penny', shortName: '1¢', value: 1, kind: 'coin', portrait: 'PENNY', fact: 'One hundred pennies make one dollar.', image: pennyUrl, backImage: pennyBackUrl, diameter: 19.05 },
 ]
 
 type WalletPiece = {
@@ -88,6 +99,8 @@ const dragState = ref<DragState | null>(null)
 const panState = ref<PanState | null>(null)
 const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
 const pickedPieceKeys = ref<Record<string, boolean>>({})
+const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
+const pendingPickTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
@@ -149,6 +162,40 @@ const selectedCount = computed(() => Object.values(selected.value).reduce((sum, 
 const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
 const currentTip = computed(() => denominations[(solved.value + level.value) % denominations.length]?.fact ?? '')
+
+function seededFace(key: string) {
+  const seedText = `${round.value.target}-${level.value}-${key}`
+  const seed = [...seedText].reduce((sum, character) => sum + character.charCodeAt(0), 0)
+  if (level.value === 1) return seed % 4 === 0 ? 'front' : 'back'
+  return seed % 2 === 0 ? 'front' : 'back'
+}
+
+function pieceFace(piece: WalletPiece) {
+  return flippedFaces.value[piece.key] ?? seededFace(piece.key)
+}
+
+function pieceImage(piece: WalletPiece) {
+  return pieceFace(piece) === 'back' ? piece.money.backImage : piece.money.image
+}
+
+function flipPiece(key: string) {
+  const pendingPick = pendingPickTimers.get(key)
+  if (pendingPick) {
+    clearTimeout(pendingPick)
+    pendingPickTimers.delete(key)
+  }
+  const currentFace = flippedFaces.value[key] ?? seededFace(key)
+  flippedFaces.value[key] = currentFace === 'front' ? 'back' : 'front'
+}
+
+function schedulePick(money: Money, key: string) {
+  if (pendingPickTimers.has(key)) return
+  const timer = setTimeout(() => {
+    pendingPickTimers.delete(key)
+    pickPiece(money, key)
+  }, 230)
+  pendingPickTimers.set(key, timer)
+}
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
   const billAnchors = [
@@ -266,9 +313,12 @@ function checkAnswer() {
   }
 }
 function resetSelection() {
+  pendingPickTimers.forEach((timer) => clearTimeout(timer))
+  pendingPickTimers.clear()
   selected.value = {}
   pickedPieceKeys.value = {}
   pieceOffsets.value = {}
+  flippedFaces.value = {}
   result.value = 'idle'
   hintStep.value = 0
 }
@@ -328,7 +378,9 @@ function endDrag(event: PointerEvent) {
   if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 
   if (drag.source === 'table') {
-    if (!drag.moved || isPointInside(trayRef.value, event.clientX, event.clientY)) {
+    if (!drag.moved) {
+      schedulePick(drag.money, drag.key)
+    } else if (isPointInside(trayRef.value, event.clientX, event.clientY)) {
       pickPiece(drag.money, drag.key)
     } else {
       const currentOffset = pieceOffsets.value[drag.key] ?? { x: 0, y: 0 }
@@ -408,7 +460,7 @@ function endPan(event: PointerEvent) {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ expert: level === 3 }">
     <header class="topbar">
       <a class="brand" href="#" aria-label="Cash Class home">
         <span class="brand-mark"><span>$</span></span>
@@ -455,6 +507,7 @@ function endPan(event: PointerEvent) {
           <div class="canvas-help">
             <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the payment area</span>
             <span><Move :size="15" /><strong>Drag the wood</strong> to move around the table</span>
+            <span><RotateCcw :size="14" /><strong>Double-click</strong> a piece to flip it</span>
           </div>
           <div class="table-stage">
             <div ref="tableRef" class="money-table" :class="{ panning: panState }">
@@ -481,7 +534,10 @@ function endPan(event: PointerEvent) {
                   'physical-money',
                   `kind-${piece.money.kind}`,
                   piece.money.id,
-                  { dragging: dragState?.key === piece.key },
+                  {
+                    dragging: dragState?.key === piece.key,
+                    'showing-back': pieceFace(piece) === 'back',
+                  },
                 ]"
                 :style="pieceStyle(piece)"
                 :aria-label="`Pick up one ${piece.money.name}`"
@@ -489,10 +545,11 @@ function endPan(event: PointerEvent) {
                 @pointermove.stop.prevent="moveDrag"
                 @pointerup.stop.prevent="endDrag"
                 @pointercancel.stop="cancelDrag"
+                @dblclick.stop.prevent="flipPiece(piece.key)"
                 @keydown.enter.prevent="adjust(piece.money, 1)"
                 @keydown.space.prevent="adjust(piece.money, 1)"
               >
-                <img :src="piece.money.image" :alt="piece.money.name" draggable="false">
+                <img :src="pieceImage(piece)" :alt="`${piece.money.name}, ${pieceFace(piece)} side`" draggable="false">
                 <span class="money-value-badge">{{ piece.money.shortName }}</span>
               </button>
 
@@ -522,7 +579,10 @@ function endPan(event: PointerEvent) {
                     'selected-money',
                     `kind-${piece.money.kind}`,
                     piece.money.id,
-                    { dragging: dragState?.key === piece.key },
+                    {
+                      dragging: dragState?.key === piece.key,
+                      'showing-back': pieceFace(piece) === 'back',
+                    },
                   ]"
                   :style="selectedPieceStyle(piece)"
                   :aria-label="`Return one ${piece.money.name} to the table`"
@@ -533,7 +593,7 @@ function endPan(event: PointerEvent) {
                   @keydown.enter.prevent="returnPiece(piece.money, piece.key)"
                   @keydown.space.prevent="returnPiece(piece.money, piece.key)"
                 >
-                  <img :src="piece.money.image" alt="" draggable="false">
+                  <img :src="pieceImage(piece)" alt="" draggable="false">
                   <span>{{ piece.money.shortName }}</span>
                 </button>
               </div>
@@ -579,7 +639,7 @@ function endPan(event: PointerEvent) {
     <footer>
       <span>CashClass</span> · Learn money by doing
       <button @click="showGuide = true">Money guide</button>
-      <small>Educational bill art: U.S. Currency Education Program · Coin imagery: U.S. Mint public-domain works</small>
+      <small>Bill imagery: U.S. Currency Education Program · Coin imagery: U.S. Mint public-domain works · Penny reverse: MisfitMaid, CC BY-SA 4.0</small>
     </footer>
 
     <div v-if="showGuide" class="modal-backdrop" @click.self="showGuide = false">
