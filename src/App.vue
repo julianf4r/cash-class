@@ -154,31 +154,64 @@ function solveBounded(target: number, inventory: Record<string, number>) {
 }
 
 function makeRound(difficulty: number): Round {
-  const dollarPatterns = difficulty === 1
-    ? [1, 5, 10, 20]
+  const billScenarios = difficulty === 1
+    ? [
+        { dollars: 1, bills: { one: 1 } },
+        { dollars: 5, bills: { five: 1 } },
+        { dollars: 10, bills: { ten: 1 } },
+        { dollars: 20, bills: { twenty: 1 } },
+      ]
     : difficulty === 2
-      ? [6, 11, 15, 21, 25]
-      : [7, 12, 17, 22, 27, 32]
+      ? [
+          { dollars: 6, bills: { five: 1, one: 1 } },
+          { dollars: 11, bills: { ten: 1, one: 1 } },
+          { dollars: 15, bills: { ten: 1, five: 1 } },
+          { dollars: 21, bills: { twenty: 1, one: 1 } },
+          { dollars: 25, bills: { twenty: 1, five: 1 } },
+        ]
+      : [
+          { dollars: 7, bills: { five: 1, one: 2 } },
+          { dollars: 12, bills: { ten: 1, one: 2 } },
+          { dollars: 17, bills: { ten: 1, five: 1, one: 2 } },
+          { dollars: 22, bills: { twenty: 1, one: 2 } },
+          { dollars: 27, bills: { twenty: 1, five: 1, one: 2 } },
+          { dollars: 32, bills: { twenty: 1, ten: 1, one: 2 } },
+        ]
   const centPatterns = difficulty === 1
     ? [25, 50, 75]
     : difficulty === 2
       ? [30, 35, 40, 45, 55, 60, 65, 80, 85, 90, 95]
       : [26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96]
+  const scenario = billScenarios[Math.floor(Math.random() * billScenarios.length)] ?? billScenarios[0]!
   const inventory: Record<string, number> = {
-    hundred: 1,
-    fifty: 1,
-    twenty: 2,
-    ten: 2,
-    five: 2,
-    one: 5,
+    hundred: 0,
+    fifty: 0,
+    twenty: 0,
+    ten: 0,
+    five: 0,
+    one: 0,
     quarter: 4,
     dime: 10,
     nickel: 5,
     penny: difficulty === 3 ? 10 : 5,
   }
-  const dollars = dollarPatterns[Math.floor(Math.random() * dollarPatterns.length)] ?? 1
+  Object.entries(scenario.bills).forEach(([id, count]) => {
+    inventory[id] = count
+  })
+  const distractorCount = difficulty === 1
+    ? (Math.random() < 0.35 ? 1 : 0)
+    : difficulty === 2
+      ? 1
+      : (Math.random() < 0.5 ? 2 : 1)
+  billDenominations
+    .filter((money) => !(money.id in scenario.bills))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, distractorCount)
+    .forEach((money) => {
+      inventory[money.id] = 1
+    })
   const cents = centPatterns[Math.floor(Math.random() * centPatterns.length)] ?? 25
-  const target = dollars * 100 + cents
+  const target = scenario.dollars * 100 + cents
   const answer = solveBounded(target, inventory)
   return { target, inventory, optimalCount: answer.count, optimalSelection: answer.selection }
 }
@@ -211,18 +244,20 @@ function flipPiece(key: string) {
 }
 
 const billAnchors = [
-  { x: 280, y: 220 },
-  { x: 500, y: 280 },
-  { x: 720, y: 205 },
-  { x: 350, y: 500 },
-  { x: 610, y: 480 },
-  { x: 830, y: 430 },
+  { x: 260, y: 220 },
+  { x: 500, y: 260 },
+  { x: 300, y: 490 },
+  { x: 520, y: 520 },
+  { x: 280, y: 730 },
+  { x: 520, y: 750 },
 ]
 
 function makeWalletPiece(money: Money, index: number): WalletPiece {
   const isBill = money.kind === 'bill'
   const groupIndex = isBill
-    ? billDenominations.findIndex((item) => item.id === money.id)
+    ? billDenominations
+        .filter((item) => (round.value.inventory[item.id] ?? 0) > 0)
+        .findIndex((item) => item.id === money.id)
     : coinDenominations.findIndex((item) => item.id === money.id)
   const billAnchor = billAnchors[groupIndex] ?? { x: 300, y: 200 }
   return {
