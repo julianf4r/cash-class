@@ -20,19 +20,25 @@ app displays only one side of a note at a time.
 
 ## Coins
 
-The coin obverse images are U.S. Mint works made available as public-domain
-U.S. government works. Local copies were downloaded through Wikimedia Commons:
+The coin images are uncirculated U.S. Mint images:
 
-- `penny.jpg`: 2025 Lincoln cent obverse, Philadelphia
-- `nickel.jpg`: Jefferson nickel uncirculated obverse
-- `dime.png`: 2013 Roosevelt dime obverse
-- `quarter.jpg`: 2021-P Washington quarter obverse
+- [Penny](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/penny):
+  `penny.jpg` and `penny-back.jpg`
+- [Nickel](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/nickel):
+  `nickel.jpg` and `nickel-back.jpg`
+- [Dime](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/dime):
+  `dime.jpg` and `dime-back.jpg` use the 2025 Roosevelt design
+- `quarter.jpg`: the shared Washington obverse used by the state quarters
 
-Reverse images:
+State quarter reverse images are uncirculated U.S. Mint images:
 
-- `nickel-back.png`: U.S. Mint 2013 Monticello reverse, public domain
-- `dime-back.png`: U.S. Mint 2013 torch reverse, public domain
-- `quarter-back.jpg`: U.S. Mint 2021 Washington Crossing the Delaware reverse, public domain
-- `penny-back.png`: 2023 Union Shield penny photograph by Wikimedia Commons user MisfitMaid, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- [California](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/california)
+- [New York](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/new-york)
+- [Texas](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/texas)
+- [Florida](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/florida)
+- [Hawaii](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/hawaii)
+- [Alaska](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/alaska)
+- [Colorado](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/colorado)
+- [Pennsylvania](https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/pennsylvania)
 
 The application uses the official coin diameters published by the U.S. Mint.

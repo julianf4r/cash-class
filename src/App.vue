@@ -17,13 +17,25 @@ import bill50BackUrl from './assets/money/bill-50-back.jpg'
 import bill100Url from './assets/money/bill-100.jpg'
 import bill100BackUrl from './assets/money/bill-100-back.jpg'
 import pennyUrl from './assets/money/penny.jpg'
-import pennyBackUrl from './assets/money/penny-back.png'
+import pennyBackUrl from './assets/money/penny-back.jpg'
 import nickelUrl from './assets/money/nickel.jpg'
-import nickelBackUrl from './assets/money/nickel-back.png'
-import dimeUrl from './assets/money/dime.png'
-import dimeBackUrl from './assets/money/dime-back.png'
+import nickelBackUrl from './assets/money/nickel-back.jpg'
+import dimeUrl from './assets/money/dime.jpg'
+import dimeBackUrl from './assets/money/dime-back.jpg'
 import quarterUrl from './assets/money/quarter.jpg'
-import quarterBackUrl from './assets/money/quarter-back.jpg'
+import quarterAlaskaUrl from './assets/money/quarter-alaska.jpg'
+import quarterCaliforniaUrl from './assets/money/quarter-california.jpg'
+import quarterColoradoUrl from './assets/money/quarter-colorado.jpg'
+import quarterFloridaUrl from './assets/money/quarter-florida.jpg'
+import quarterHawaiiUrl from './assets/money/quarter-hawaii.jpg'
+import quarterNewYorkUrl from './assets/money/quarter-new-york.jpg'
+import quarterPennsylvaniaUrl from './assets/money/quarter-pennsylvania.jpg'
+import quarterTexasUrl from './assets/money/quarter-texas.jpg'
+
+type MoneyBackVariant = {
+  name: string
+  image: string
+}
 
 type Money = {
   id: string
@@ -35,6 +47,7 @@ type Money = {
   fact: string
   image: string
   backImage: string
+  backVariants?: MoneyBackVariant[]
   diameter?: number
 }
 type Round = {
@@ -45,6 +58,17 @@ type Round = {
   layoutSeed: number
 }
 
+const quarterBackVariants: MoneyBackVariant[] = [
+  { name: 'California', image: quarterCaliforniaUrl },
+  { name: 'New York', image: quarterNewYorkUrl },
+  { name: 'Texas', image: quarterTexasUrl },
+  { name: 'Florida', image: quarterFloridaUrl },
+  { name: 'Hawaii', image: quarterHawaiiUrl },
+  { name: 'Alaska', image: quarterAlaskaUrl },
+  { name: 'Colorado', image: quarterColoradoUrl },
+  { name: 'Pennsylvania', image: quarterPennsylvaniaUrl },
+]
+
 const denominations: Money[] = [
   { id: 'hundred', name: 'One-hundred-dollar bill', shortName: '$100', value: 10000, kind: 'bill', portrait: 'FRANKLIN', fact: 'Benjamin Franklin appears on the $100 bill, although he was never president.', image: bill100Url, backImage: bill100BackUrl },
   { id: 'fifty', name: 'Fifty-dollar bill', shortName: '$50', value: 5000, kind: 'bill', portrait: 'GRANT', fact: 'President Ulysses S. Grant appears on the $50 bill.', image: bill50Url, backImage: bill50BackUrl },
@@ -52,7 +76,7 @@ const denominations: Money[] = [
   { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.', image: bill10Url, backImage: bill10BackUrl },
   { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.', image: bill5Url, backImage: bill5BackUrl },
   { id: 'one', name: 'One-dollar bill', shortName: '$1', value: 100, kind: 'bill', portrait: 'WASHINGTON', fact: 'The $1 bill features George Washington.', image: bill1Url, backImage: bill1BackUrl },
-  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar.', image: quarterUrl, backImage: quarterBackUrl, diameter: 24.26 },
+  { id: 'quarter', name: 'Quarter', shortName: '25¢', value: 25, kind: 'coin', portrait: 'QUARTER', fact: 'Four quarters make one dollar. State quarters can have many different reverse designs.', image: quarterUrl, backImage: quarterCaliforniaUrl, backVariants: quarterBackVariants, diameter: 24.26 },
   { id: 'dime', name: 'Dime', shortName: '10¢', value: 10, kind: 'coin', portrait: 'DIME', fact: 'The dime is worth 10¢, even though it is the smallest U.S. coin.', image: dimeUrl, backImage: dimeBackUrl, diameter: 17.91 },
   { id: 'nickel', name: 'Nickel', shortName: '5¢', value: 5, kind: 'coin', portrait: 'NICKEL', fact: 'A nickel is worth 5¢ and is larger than a dime.', image: nickelUrl, backImage: nickelBackUrl, diameter: 21.21 },
   { id: 'penny', name: 'Penny', shortName: '1¢', value: 1, kind: 'coin', portrait: 'PENNY', fact: 'One hundred pennies make one dollar.', image: pennyUrl, backImage: pennyBackUrl, diameter: 19.05 },
@@ -330,8 +354,22 @@ function pieceFace(piece: WalletPiece) {
   return flippedFaces.value[piece.key] ?? seededFace(piece.key)
 }
 
+function pieceBackVariant(piece: WalletPiece) {
+  const variants = piece.money.backVariants
+  if (!variants?.length) return null
+  const offset = Math.floor(seededNumber(`${round.value.layoutSeed}-${piece.money.id}-variant-offset`) * variants.length)
+  return variants[(offset + piece.index) % variants.length] ?? null
+}
+
 function pieceImage(piece: WalletPiece) {
-  return pieceFace(piece) === 'back' ? piece.money.backImage : piece.money.image
+  if (pieceFace(piece) === 'front') return piece.money.image
+  return pieceBackVariant(piece)?.image ?? piece.money.backImage
+}
+
+function pieceSideLabel(piece: WalletPiece) {
+  if (pieceFace(piece) === 'front') return 'Front side'
+  const variant = pieceBackVariant(piece)
+  return variant ? `${variant.name} reverse` : 'Reverse side'
 }
 
 function flipPiece(key: string) {
@@ -884,7 +922,7 @@ function endPan(event: PointerEvent) {
     <footer>
       <span>CashClass</span> · Learn money by doing
       <button @click="showGuide = true">Money guide</button>
-      <small>Bill imagery: U.S. Currency Education Program · Coin imagery: U.S. Mint public-domain works · Penny reverse: MisfitMaid, CC BY-SA 4.0</small>
+      <small>Bill imagery: U.S. Currency Education Program · Coin imagery: U.S. Mint</small>
     </footer>
 
     <div
@@ -898,7 +936,7 @@ function endPan(event: PointerEvent) {
       </div>
       <span v-if="level !== 3">
         <strong>{{ coinPreview.piece.money.name }}</strong>
-        <small>{{ pieceFace(coinPreview.piece) === 'front' ? 'Front side' : 'Reverse side' }} · magnified view</small>
+        <small>{{ pieceSideLabel(coinPreview.piece) }} · magnified view</small>
       </span>
     </div>
 
