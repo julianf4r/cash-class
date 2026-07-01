@@ -86,6 +86,12 @@ type PanState = {
   scrollTop: number
 }
 
+type CoinPreview = {
+  piece: WalletPiece
+  left: number
+  top: number
+}
+
 const level = ref(1)
 const score = ref(0)
 const streak = ref(0)
@@ -100,6 +106,7 @@ const panState = ref<PanState | null>(null)
 const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
 const pickedPieceKeys = ref<Record<string, boolean>>({})
 const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
+const coinPreview = ref<CoinPreview | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
@@ -330,6 +337,7 @@ function isPointInside(element: HTMLElement | null, x: number, y: number) {
 
 function beginDrag(event: PointerEvent, money: Money, key: string, source: 'table' | 'tray') {
   if (result.value === 'correct' || event.button !== 0) return
+  coinPreview.value = null
   const target = event.currentTarget as HTMLElement
   target.setPointerCapture(event.pointerId)
   dragState.value = {
@@ -352,6 +360,26 @@ function moveDrag(event: PointerEvent) {
   dragState.value.dx = dx
   dragState.value.dy = dy
   dragState.value.moved = dragState.value.moved || Math.hypot(dx, dy) > 7
+}
+
+function showCoinPreview(event: PointerEvent, piece: WalletPiece) {
+  if (piece.money.kind !== 'coin' || event.pointerType === 'touch' || dragState.value) return
+  const previewWidth = 224
+  const previewHeight = 264
+  coinPreview.value = {
+    piece,
+    left: Math.max(12, Math.min(event.clientX + 24, window.innerWidth - previewWidth - 12)),
+    top: Math.max(12, Math.min(event.clientY - previewHeight / 2, window.innerHeight - previewHeight - 12)),
+  }
+}
+
+function moveMoneyPointer(event: PointerEvent, piece: WalletPiece) {
+  if (dragState.value) moveDrag(event)
+  else showCoinPreview(event, piece)
+}
+
+function hideCoinPreview(key: string) {
+  if (coinPreview.value?.piece.key === key) coinPreview.value = null
 }
 
 function endDrag(event: PointerEvent) {
@@ -524,8 +552,10 @@ function endPan(event: PointerEvent) {
                 ]"
                 :style="pieceStyle(piece)"
                 :aria-label="`Pick up one ${piece.money.name}`"
+                @pointerenter="showCoinPreview($event, piece)"
                 @pointerdown.stop.prevent="beginDrag($event, piece.money, piece.key, 'table')"
-                @pointermove.stop.prevent="moveDrag"
+                @pointermove.stop.prevent="moveMoneyPointer($event, piece)"
+                @pointerleave="hideCoinPreview(piece.key)"
                 @pointerup.stop.prevent="endDrag"
                 @pointercancel.stop="cancelDrag"
                 @contextmenu.stop.prevent="flipPiece(piece.key)"
@@ -625,6 +655,21 @@ function endPan(event: PointerEvent) {
       <button @click="showGuide = true">Money guide</button>
       <small>Bill imagery: U.S. Currency Education Program · Coin imagery: U.S. Mint public-domain works · Penny reverse: MisfitMaid, CC BY-SA 4.0</small>
     </footer>
+
+    <div
+      v-if="coinPreview"
+      class="coin-preview"
+      :style="{ left: `${coinPreview.left}px`, top: `${coinPreview.top}px` }"
+      aria-hidden="true"
+    >
+      <div class="coin-preview-image">
+        <img :src="pieceImage(coinPreview.piece)" alt="" draggable="false">
+      </div>
+      <span>
+        <strong>{{ coinPreview.piece.money.name }}</strong>
+        <small>{{ pieceFace(coinPreview.piece) === 'front' ? 'Front side' : 'Reverse side' }} · magnified view</small>
+      </span>
+    </div>
 
     <div v-if="showGuide" class="modal-backdrop" @click.self="showGuide = false">
       <section class="guide-modal">
