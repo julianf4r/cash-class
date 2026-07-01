@@ -75,6 +75,8 @@ type DragState = {
   startY: number
   startCenterX: number
   startCenterY: number
+  grabX: number
+  grabY: number
   dx: number
   dy: number
   moved: boolean
@@ -377,6 +379,8 @@ function beginDrag(event: PointerEvent, money: Money, key: string, source: 'tabl
     startY: event.clientY,
     startCenterX: targetRect.left + targetRect.width / 2,
     startCenterY: targetRect.top + targetRect.height / 2,
+    grabX: Math.max(0, Math.min(target.offsetWidth, event.offsetX)),
+    grabY: Math.max(0, Math.min(target.offsetHeight, event.offsetY)),
     dx: 0,
     dy: 0,
     moved: false,
@@ -471,6 +475,8 @@ function pieceStyle(piece: WalletPiece) {
     '--piece-rotation': `${piece.rotation}deg`,
     '--drag-x': `${drag?.dx ?? 0}px`,
     '--drag-y': `${drag?.dy ?? 0}px`,
+    '--grab-x': drag ? `${drag.grabX}px` : '50%',
+    '--grab-y': drag ? `${drag.grabY}px` : '50%',
     '--coin-scale': coinScale,
     '--piece-z': drag ? 280 : (pieceLayers.value[piece.key] ?? piece.index + 1),
   }
@@ -487,6 +493,8 @@ function selectedPieceStyle(piece: WalletPiece) {
     '--piece-rotation': `${piece.rotation}deg`,
     '--drag-x': `${drag?.dx ?? 0}px`,
     '--drag-y': `${drag?.dy ?? 0}px`,
+    '--grab-x': drag ? `${drag.grabX}px` : '50%',
+    '--grab-y': drag ? `${drag.grabY}px` : '50%',
     '--coin-scale': coinScale,
     '--piece-z': drag ? 200 : piece.index + 1,
   }
