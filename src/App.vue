@@ -235,8 +235,8 @@ const selectedPieces = computed<WalletPiece[]>(() => {
         key,
         money,
         index,
-        x: money.kind === 'bill' ? 135 + (displayIndex % 2) * 155 : 62 + (displayIndex % 6) * 56,
-        y: money.kind === 'bill' ? 205 + Math.floor(displayIndex / 2) * 68 : 475 + Math.floor(displayIndex / 6) * 52,
+        x: money.kind === 'bill' ? 130 + (displayIndex % 2) * 90 : 48 + (displayIndex % 6) * 50,
+        y: money.kind === 'bill' ? 190 + Math.floor(displayIndex / 2) * 62 : 405 + Math.floor(displayIndex / 6) * 46,
         rotation: ((displayIndex * 5) % 9) - 4,
       })
     }
@@ -574,8 +574,8 @@ function endPan(event: PointerEvent) {
 
             <section ref="trayRef" class="cash-zone" :class="{ 'drop-ready': dragState?.source === 'table' }">
               <div class="cash-zone-heading">
-                <span><small>PAYMENT AREA</small><strong>Drop your answer here</strong></span>
-                <span class="target-pill">TARGET {{ formatMoney(round.target) }}</span>
+                <span class="payment-label"><small>PAYMENT AREA</small><strong>Drop money here</strong></span>
+                <span class="target-pill"><small>TARGET</small><strong>{{ formatMoney(round.target) }}</strong></span>
               </div>
               <div class="cash-zone-total">
                 <span>SELECTED</span>
