@@ -6,7 +6,7 @@ import {
 } from '@lucide/vue'
 import bill1Url from './assets/money/bill-1.jpg'
 import bill1BackUrl from './assets/money/bill-1-back.jpg'
-import bill5Url from './assets/money/bill-5.jpg'
+import bill5Url from './assets/money/bill-5.png'
 import bill5BackUrl from './assets/money/bill-5-back.jpg'
 import bill10Url from './assets/money/bill-10.jpg'
 import bill10BackUrl from './assets/money/bill-10-back.jpg'
