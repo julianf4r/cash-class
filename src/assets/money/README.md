@@ -12,9 +12,11 @@ Education Program's official current-note feature sheets:
 - [$50 Note Issued 2004 to Present](https://www.uscurrency.gov/sites/default/files/downloadable-materials/files/en/50-2004-present-features-en.pdf)
 - [$100 Note Issued 2013 to Present](https://www.uscurrency.gov/sites/default/files/downloadable-materials/files/en/100-2013-present-features-en.pdf)
 
-The matching reverse images were extracted from the same sheets. The official
-`SPECIMEN` overlays are intentionally preserved, and the app displays only one
-side of a note at a time.
+The matching reverse images were color-managed page renders cropped from the
+same sheets. Rendering the full PDF preserves its intended RGB appearance,
+which is lost when some embedded print-color image layers are extracted
+directly. The official `SPECIMEN` overlays are intentionally preserved, and the
+app displays only one side of a note at a time.
 
 ## Coins
 
