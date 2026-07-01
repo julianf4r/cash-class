@@ -73,6 +73,8 @@ type DragState = {
   pointerId: number
   startX: number
   startY: number
+  startCenterX: number
+  startCenterY: number
   dx: number
   dy: number
   moved: boolean
@@ -110,6 +112,7 @@ const pickedPieceKeys = ref<Record<string, boolean>>({})
 const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
 const coinPreview = ref<CoinPreview | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
+const tableCanvasRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
 const coinDenominations = denominations.filter((item) => item.kind === 'coin')
@@ -191,36 +194,44 @@ function flipPiece(key: string) {
   const currentFace = flippedFaces.value[key] ?? seededFace(key)
   flippedFaces.value[key] = currentFace === 'front' ? 'back' : 'front'
 }
+
+const billAnchors = [
+  { x: 280, y: 220 },
+  { x: 500, y: 280 },
+  { x: 720, y: 205 },
+  { x: 350, y: 500 },
+  { x: 610, y: 480 },
+  { x: 830, y: 430 },
+]
+
+function makeWalletPiece(money: Money, index: number): WalletPiece {
+  const isBill = money.kind === 'bill'
+  const groupIndex = isBill
+    ? billDenominations.findIndex((item) => item.id === money.id)
+    : coinDenominations.findIndex((item) => item.id === money.id)
+  const billAnchor = billAnchors[groupIndex] ?? { x: 300, y: 200 }
+  return {
+    key: `${money.id}-${index}`,
+    money,
+    index,
+    x: isBill
+      ? billAnchor.x + index * 13
+      : 230 + ((groupIndex * 283 + index * 97) % 1080),
+    y: isBill
+      ? billAnchor.y + index * 9
+      : 165 + ((groupIndex * 151 + index * 109) % 610),
+    rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
+  }
+}
+
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
-  const billAnchors = [
-    { x: 280, y: 220 },
-    { x: 500, y: 280 },
-    { x: 720, y: 205 },
-    { x: 350, y: 500 },
-    { x: 610, y: 480 },
-    { x: 830, y: 430 },
-  ]
   denominations.forEach((money) => {
     const inventoryCount = round.value.inventory[money.id] ?? 0
     for (let index = 0; index < inventoryCount; index++) {
       const key = `${money.id}-${index}`
       if (pickedPieceKeys.value[key]) continue
-      const isBill = money.kind === 'bill'
-      const groupIndex = isBill ? billDenominations.indexOf(money) : coinDenominations.indexOf(money)
-      const billAnchor = billAnchors[groupIndex] ?? { x: 300, y: 200 }
-      pieces.push({
-        key,
-        money,
-        index,
-        x: isBill
-          ? billAnchor.x + index * 13
-          : 230 + ((groupIndex * 283 + index * 97) % 1080),
-        y: isBill
-          ? billAnchor.y + index * 9
-          : 165 + ((groupIndex * 151 + index * 109) % 610),
-        rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
-      })
+      pieces.push(makeWalletPiece(money, index))
     }
   })
   return pieces
@@ -355,6 +366,7 @@ function beginDrag(event: PointerEvent, money: Money, key: string, source: 'tabl
   if (result.value === 'correct' || event.button !== 0) return
   coinPreview.value = null
   const target = event.currentTarget as HTMLElement
+  const targetRect = target.getBoundingClientRect()
   target.setPointerCapture(event.pointerId)
   dragState.value = {
     key,
@@ -363,6 +375,8 @@ function beginDrag(event: PointerEvent, money: Money, key: string, source: 'tabl
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
+    startCenterX: targetRect.left + targetRect.width / 2,
+    startCenterY: targetRect.top + targetRect.height / 2,
     dx: 0,
     dy: 0,
     moved: false,
@@ -419,11 +433,23 @@ function endDrag(event: PointerEvent) {
       }
       bringPieceToFront(drag.key)
     }
+  } else if (!drag.moved) {
+    returnPiece(drag.money, drag.key)
   } else if (
-    !drag.moved ||
-    (!isPointInside(trayRef.value, event.clientX, event.clientY) &&
-      isPointInside(tableRef.value, event.clientX, event.clientY))
+    !isPointInside(trayRef.value, event.clientX, event.clientY) &&
+    isPointInside(tableRef.value, event.clientX, event.clientY) &&
+    tableCanvasRef.value
   ) {
+    const canvasRect = tableCanvasRef.value.getBoundingClientRect()
+    const pieceIndex = Number(drag.key.slice(drag.key.lastIndexOf('-') + 1))
+    const basePiece = makeWalletPiece(drag.money, pieceIndex)
+    const canvasX = drag.startCenterX + drag.dx - canvasRect.left
+    const canvasY = drag.startCenterY + drag.dy - canvasRect.top
+    pieceOffsets.value[drag.key] = {
+      x: canvasX - basePiece.x,
+      y: canvasY - basePiece.y,
+    }
+    bringPieceToFront(drag.key)
     returnPiece(drag.money, drag.key)
   }
   dragState.value = null
@@ -438,6 +464,8 @@ function pieceStyle(piece: WalletPiece) {
   const offset = pieceOffsets.value[piece.key] ?? { x: 0, y: 0 }
   const coinScale = piece.money.kind === 'coin' ? (piece.money.diameter ?? 24.26) / 24.26 : 1
   return {
+    left: `${piece.x + offset.x}px`,
+    top: `${piece.y + offset.y}px`,
     '--piece-x': `${piece.x + offset.x}px`,
     '--piece-y': `${piece.y + offset.y}px`,
     '--piece-rotation': `${piece.rotation}deg`,
@@ -452,6 +480,8 @@ function selectedPieceStyle(piece: WalletPiece) {
   const drag = dragState.value?.key === piece.key ? dragState.value : null
   const coinScale = piece.money.kind === 'coin' ? (piece.money.diameter ?? 24.26) / 24.26 : 1
   return {
+    left: `${piece.x}px`,
+    top: `${piece.y}px`,
     '--tray-x': `${piece.x}px`,
     '--tray-y': `${piece.y}px`,
     '--piece-rotation': `${piece.rotation}deg`,
@@ -537,6 +567,7 @@ function endPan(event: PointerEvent) {
           <div class="table-stage">
             <div ref="tableRef" class="money-table" :class="{ panning: panState }">
               <div
+                ref="tableCanvasRef"
                 class="table-canvas"
                 @pointerdown.prevent="beginPan"
                 @pointermove.prevent="movePan"
