@@ -76,6 +76,7 @@ type DragState = {
   dx: number
   dy: number
   moved: boolean
+  overTray: boolean
 }
 
 type PanState = {
@@ -365,6 +366,7 @@ function beginDrag(event: PointerEvent, money: Money, key: string, source: 'tabl
     dx: 0,
     dy: 0,
     moved: false,
+    overTray: source === 'tray',
   }
 }
 
@@ -375,6 +377,7 @@ function moveDrag(event: PointerEvent) {
   dragState.value.dx = dx
   dragState.value.dy = dy
   dragState.value.moved = dragState.value.moved || Math.hypot(dx, dy) > 7
+  dragState.value.overTray = isPointInside(trayRef.value, event.clientX, event.clientY)
 }
 
 function showCoinPreview(event: PointerEvent, piece: WalletPiece) {
@@ -558,6 +561,7 @@ function endPan(event: PointerEvent) {
                   piece.money.id,
                   {
                     dragging: dragState?.key === piece.key,
+                    'over-tray': dragState?.key === piece.key && dragState.overTray,
                     'showing-back': pieceFace(piece) === 'back',
                   },
                 ]"
@@ -584,7 +588,11 @@ function endPan(event: PointerEvent) {
               </div>
             </div>
 
-            <section ref="trayRef" class="cash-zone" :class="{ 'drop-ready': dragState?.source === 'table' }">
+            <section
+              ref="trayRef"
+              class="cash-zone"
+              :class="{ 'drop-ready': dragState?.source === 'table' && dragState.overTray }"
+            >
               <div class="cash-zone-heading">
                 <span class="payment-label"><small>PAYMENT AREA</small><strong>Drop money here</strong></span>
                 <span class="target-pill"><small>TARGET</small><strong>{{ formatMoney(round.target) }}</strong></span>
@@ -606,6 +614,7 @@ function endPan(event: PointerEvent) {
                     piece.money.id,
                     {
                       dragging: dragState?.key === piece.key,
+                      'outside-tray': dragState?.key === piece.key && !dragState.overTray,
                       'showing-back': pieceFace(piece) === 'back',
                     },
                   ]"
