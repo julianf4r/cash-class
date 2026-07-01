@@ -99,6 +99,7 @@ main{width:min(1480px,calc(100% - 32px))}
 .canvas-help{display:flex;align-items:center;justify-content:flex-end;gap:20px;min-height:40px;color:#654731;font-size:11px}
 .canvas-help>span{display:flex;align-items:center;gap:5px}.canvas-help strong{color:#422d1d}
 .money-table{height:700px;margin-top:6px;overflow:auto;cursor:grab;overscroll-behavior:contain;scrollbar-color:#7b5638 #c99b67;scrollbar-width:thin}
+.money-table::-webkit-scrollbar{width:10px;height:10px}.money-table::-webkit-scrollbar-track{margin:7px;border-radius:10px;background:#c99b67}.money-table::-webkit-scrollbar-thumb{border:2px solid #c99b67;border-radius:10px;background:#765033}.money-table::-webkit-scrollbar-button{display:none;width:0;height:0}.money-table::-webkit-scrollbar-corner{background:transparent}
 .money-table.panning{cursor:grabbing}
 .money-table:after{content:none}
 .table-canvas{position:relative;width:1500px;height:900px;overflow:hidden;background:linear-gradient(92deg,#bb8751,#d0a36d 38%,#b77e48 72%,#cb9a62);touch-action:none}
@@ -130,7 +131,7 @@ main{width:min(1480px,calc(100% - 32px))}
 
 .cash-zone{position:absolute;z-index:300;top:18px;right:18px;width:360px;height:620px;overflow:visible;border:2px dashed #2f7550;border-radius:18px;background:#f7f5ebe8;box-shadow:0 12px 34px #263d312e,inset 0 0 0 5px #ffffff70;backdrop-filter:blur(4px);transition:.18s}
 .cash-zone.drop-ready{border-style:solid;border-color:#1d7b4d;background:#ecf5eaf2;box-shadow:0 0 0 5px #2f8b5c3d,0 16px 40px #1d4c3438}
-.cash-zone-heading{height:82px;padding:10px 11px 10px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #496d5840;background:#f8faf4cc}
+.cash-zone-heading{height:82px;padding:10px 11px 10px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #496d5840;border-radius:15px 15px 0 0;background:#f8faf4cc;overflow:hidden}
 .cash-zone-heading small,.cash-zone-heading strong{display:block}.payment-label small{font-size:7px;letter-spacing:1.3px;color:#638071;font-weight:800}.payment-label strong{margin-top:2px;font:700 13px 'Fraunces',serif;color:#264a38}
 .target-pill{min-width:190px;padding:8px 15px 7px;border-radius:13px;background:var(--green);color:white;text-align:right;box-shadow:0 5px 14px #1763422b}.target-pill small{font-size:7px;letter-spacing:1.5px;color:#bfe3ca;font-weight:800}.target-pill strong{margin-top:1px;font:800 28px/1 'Fraunces',serif;letter-spacing:-.6px}
 .cash-zone-total{padding:8px 14px 7px;text-align:left;border-bottom:1px solid #496d582d}.cash-zone-total>span{font-size:7px;letter-spacing:1.3px;color:#78837c;font-weight:800}.cash-zone-total>strong{float:right;margin-top:-2px;font:800 23px/1 'Fraunces',serif}.cash-zone-total>strong.over{color:#a94737}.cash-zone-total>strong.exact{color:var(--green)}.cash-zone-total .progress-track{clear:both;margin-top:8px}.cash-zone-total>small{display:block;margin-top:4px;color:#647169;font-size:8px}
