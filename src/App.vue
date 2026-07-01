@@ -513,19 +513,14 @@ function endPan(event: PointerEvent) {
     </header>
 
     <main>
-      <section class="mission">
-        <div class="mission-copy">
-          <div class="eyebrow"><span></span> TODAY'S CHALLENGE</div>
-          <h1>Make the exact amount.</h1>
-          <p>Use the fewest bills and coins possible from your wallet.</p>
-        </div>
-      </section>
-
       <section class="game-layout">
         <div class="wallet-panel">
           <div class="panel-heading">
             <div>
-              <span><small>YOUR WALLET</small><strong>Choose your money</strong></span>
+              <span>
+                <strong>Choose your money</strong>
+                <p>Match the target using the fewest bills and coins possible.</p>
+              </span>
             </div>
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
           </div>
