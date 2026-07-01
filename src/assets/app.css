@@ -51,3 +51,44 @@ footer small{display:block;margin-top:7px;color:#a0a6a2;font-size:8px}
 
 @media(max-width:900px){.money-table{height:500px}.physical-money.kind-bill{width:min(20%,150px)}.wallet-legend{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:650px){.money-table{height:560px}.table-instruction{top:38px;right:10px}.physical-money.kind-bill{width:42%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.five{left:25%}.physical-money.kind-bill.ten,.physical-money.kind-bill.one{left:74%}.physical-money.kind-bill.twenty,.physical-money.kind-bill.ten{top:21%}.physical-money.kind-bill.five,.physical-money.kind-bill.one{top:40%}.money-table:after{top:52%}.coins-label{top:54%}.physical-money.kind-coin{width:61px;height:61px}.wallet-legend{grid-template-columns:1fr 1fr}.coin-size-key{display:none}}
+
+/* Large tabletop layout and one shared physical scale */
+main{width:min(1480px,calc(100% - 32px))}
+.mission{padding:25px 0 20px}
+.mission h1{font-size:clamp(27px,2.5vw,39px)}
+.game-layout{grid-template-columns:minmax(700px,2.35fr) minmax(300px,.8fr)}
+.wallet-panel{min-width:0;padding:20px}
+.tray-panel{padding:20px 24px}
+.money-table{height:650px;margin-top:14px}
+.money-table:after{top:62%}
+.coins-label{top:65%}
+.physical-money.kind-bill{width:min(28%,225px);aspect-ratio:2.35/1}
+.physical-money.kind-bill:hover,.physical-money.kind-bill:focus-visible{transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation)) scale(1.04)}
+.physical-money.kind-bill.dragging{transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation)) scale(1.05)}
+.physical-money.kind-coin{width:min(4.35%,35px);height:auto;aspect-ratio:1}
+.physical-money.kind-coin:hover,.physical-money.kind-coin:focus-visible{transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation)) scale(calc(var(--coin-scale) * 1.12))}
+.physical-money.kind-coin.dragging{transform:translate(-50%,-50%) translate(var(--drag-x),var(--drag-y)) rotate(var(--piece-rotation)) scale(calc(var(--coin-scale) * 1.16))}
+.physical-money.kind-coin .money-value-badge{right:-12px;top:-10px;min-width:21px;height:17px;padding:0 4px;font-size:7px}
+.table-instruction{top:10px}
+.table-label{left:16px}
+
+@media(max-width:1100px){
+  .game-layout{grid-template-columns:1fr}
+  .money-table{height:640px}
+  .physical-money.kind-bill{width:min(28%,220px)}
+}
+
+@media(max-width:650px){
+  main{width:min(100% - 18px,1480px)}
+  .money-table{height:720px}
+  .table-instruction{top:34px}
+  .physical-money.kind-bill{width:min(45%,212px)}
+  .physical-money.kind-bill.hundred,.physical-money.kind-bill.twenty,.physical-money.kind-bill.five{left:25%}
+  .physical-money.kind-bill.fifty,.physical-money.kind-bill.ten,.physical-money.kind-bill.one{left:75%}
+  .physical-money.kind-bill.hundred,.physical-money.kind-bill.fifty{top:16%}
+  .physical-money.kind-bill.twenty,.physical-money.kind-bill.ten{top:34%}
+  .physical-money.kind-bill.five,.physical-money.kind-bill.one{top:52%}
+  .money-table:after{top:63%}
+  .coins-label{top:66%}
+  .physical-money.kind-coin{width:min(7%,33px);height:auto}
+}

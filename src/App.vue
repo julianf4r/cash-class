@@ -8,6 +8,8 @@ import bill1Url from './assets/money/bill-1.jpg'
 import bill5Url from './assets/money/bill-5.jpg'
 import bill10Url from './assets/money/bill-10.jpg'
 import bill20Url from './assets/money/bill-20.jpg'
+import bill50Url from './assets/money/bill-50.jpg'
+import bill100Url from './assets/money/bill-100.jpg'
 import pennyUrl from './assets/money/penny.jpg'
 import nickelUrl from './assets/money/nickel.jpg'
 import dimeUrl from './assets/money/dime.png'
@@ -32,6 +34,8 @@ type Round = {
 }
 
 const denominations: Money[] = [
+  { id: 'hundred', name: 'One-hundred-dollar bill', shortName: '$100', value: 10000, kind: 'bill', portrait: 'FRANKLIN', fact: 'Benjamin Franklin appears on the $100 bill, although he was never president.', image: bill100Url },
+  { id: 'fifty', name: 'Fifty-dollar bill', shortName: '$50', value: 5000, kind: 'bill', portrait: 'GRANT', fact: 'President Ulysses S. Grant appears on the $50 bill.', image: bill50Url },
   { id: 'twenty', name: 'Twenty-dollar bill', shortName: '$20', value: 2000, kind: 'bill', portrait: 'JACKSON', fact: 'Andrew Jackson appears on the $20 bill.', image: bill20Url },
   { id: 'ten', name: 'Ten-dollar bill', shortName: '$10', value: 1000, kind: 'bill', portrait: 'HAMILTON', fact: 'Alexander Hamilton appears on the $10 bill.', image: bill10Url },
   { id: 'five', name: 'Five-dollar bill', shortName: '$5', value: 500, kind: 'bill', portrait: 'LINCOLN', fact: 'Abraham Lincoln appears on both the $5 bill and the penny.', image: bill5Url },
@@ -75,6 +79,8 @@ const showLevelMenu = ref(false)
 const dragState = ref<DragState | null>(null)
 const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
+const billDenominations = denominations.filter((item) => item.kind === 'bill')
+const coinDenominations = denominations.filter((item) => item.kind === 'coin')
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -134,22 +140,24 @@ const progress = computed(() => Math.min((selectedTotal.value / round.value.targ
 const currentTip = computed(() => denominations[(solved.value + level.value) % denominations.length]?.fact ?? '')
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
-  denominations.forEach((money, denominationIndex) => {
+  denominations.forEach((money) => {
     const remainingCount = (round.value.inventory[money.id] ?? 0) - (selected.value[money.id] ?? 0)
     for (let index = 0; index < remainingCount; index++) {
       const isBill = money.kind === 'bill'
-      const groupIndex = isBill ? denominationIndex : denominationIndex - 4
+      const groupIndex = isBill ? billDenominations.indexOf(money) : coinDenominations.indexOf(money)
+      const billColumn = groupIndex % 3
+      const billRow = Math.floor(groupIndex / 3)
       pieces.push({
         key: `${money.id}-${index}`,
         money,
         index,
         x: isBill
-          ? 13 + groupIndex * 24 + index * 1.2
-          : 12 + groupIndex * 24 + ((index * 11 + groupIndex * 3) % 13),
+          ? 17 + billColumn * 33 + index * 0.8
+          : 12 + groupIndex * 25 + ((index * 9 + groupIndex * 3) % 11),
         y: isBill
-          ? 22 + index * 2.2
-          : 70 + ((index * 9 + groupIndex * 5) % 17),
-        rotation: ((index * 7 + denominationIndex * 5) % 11) - 5,
+          ? 19 + billRow * 27 + index * 1.25
+          : 78 + ((index * 7 + groupIndex * 5) % 12),
+        rotation: ((index * 7 + groupIndex * 5) % 9) - 4,
       })
     }
   })
@@ -328,7 +336,7 @@ function pieceStyle(piece: WalletPiece) {
               <Hand :size="16" />
               <span><strong>Pick up the money</strong>Drag it to the cash tray, or tap once.</span>
             </div>
-            <div class="table-label bills-label">BILLS · SAME REAL-WORLD SIZE</div>
+            <div class="table-label bills-label">BILLS · ALL THE SAME REAL-WORLD SIZE</div>
             <div class="table-label coins-label">COINS · TRUE RELATIVE SIZE</div>
             <div class="coin-size-key">
               <span v-for="money in denominations.filter((item) => item.kind === 'coin')" :key="money.id">
@@ -364,14 +372,6 @@ function pieceStyle(piece: WalletPiece) {
             </div>
           </div>
 
-          <div class="wallet-legend">
-            <div v-for="money in denominations" :key="money.id">
-              <span :class="['legend-swatch', money.kind, money.id]">
-                <img :src="money.image" alt="" draggable="false">
-              </span>
-              <span><strong>{{ money.shortName }} · {{ money.name.replace('-dollar bill', ' bill') }}</strong><small>{{ (round.inventory[money.id] ?? 0) - (selected[money.id] ?? 0) }} left on table</small></span>
-            </div>
-          </div>
         </div>
 
         <aside ref="trayRef" class="tray-panel" :class="{ 'drop-ready': dragState?.source === 'table' }">
