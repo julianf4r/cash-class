@@ -100,7 +100,6 @@ const panState = ref<PanState | null>(null)
 const pieceOffsets = ref<Record<string, { x: number; y: number }>>({})
 const pickedPieceKeys = ref<Record<string, boolean>>({})
 const flippedFaces = ref<Record<string, 'front' | 'back'>>({})
-const pendingPickTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const tableRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
@@ -179,22 +178,8 @@ function pieceImage(piece: WalletPiece) {
 }
 
 function flipPiece(key: string) {
-  const pendingPick = pendingPickTimers.get(key)
-  if (pendingPick) {
-    clearTimeout(pendingPick)
-    pendingPickTimers.delete(key)
-  }
   const currentFace = flippedFaces.value[key] ?? seededFace(key)
   flippedFaces.value[key] = currentFace === 'front' ? 'back' : 'front'
-}
-
-function schedulePick(money: Money, key: string) {
-  if (pendingPickTimers.has(key)) return
-  const timer = setTimeout(() => {
-    pendingPickTimers.delete(key)
-    pickPiece(money, key)
-  }, 230)
-  pendingPickTimers.set(key, timer)
 }
 const walletPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
@@ -313,8 +298,6 @@ function checkAnswer() {
   }
 }
 function resetSelection() {
-  pendingPickTimers.forEach((timer) => clearTimeout(timer))
-  pendingPickTimers.clear()
   selected.value = {}
   pickedPieceKeys.value = {}
   pieceOffsets.value = {}
@@ -379,7 +362,7 @@ function endDrag(event: PointerEvent) {
 
   if (drag.source === 'table') {
     if (!drag.moved) {
-      schedulePick(drag.money, drag.key)
+      pickPiece(drag.money, drag.key)
     } else if (isPointInside(trayRef.value, event.clientX, event.clientY)) {
       pickPiece(drag.money, drag.key)
     } else {
@@ -507,7 +490,7 @@ function endPan(event: PointerEvent) {
           <div class="canvas-help">
             <span><Hand :size="16" /><strong>Drag money</strong> to rearrange it or drop it in the payment area</span>
             <span><Move :size="15" /><strong>Drag the wood</strong> to move around the table</span>
-            <span><RotateCcw :size="14" /><strong>Double-click</strong> a piece to flip it</span>
+            <span><RotateCcw :size="14" /><strong>Right-click</strong> a piece to flip it</span>
           </div>
           <div class="table-stage">
             <div ref="tableRef" class="money-table" :class="{ panning: panState }">
@@ -545,7 +528,7 @@ function endPan(event: PointerEvent) {
                 @pointermove.stop.prevent="moveDrag"
                 @pointerup.stop.prevent="endDrag"
                 @pointercancel.stop="cancelDrag"
-                @dblclick.stop.prevent="flipPiece(piece.key)"
+                @contextmenu.stop.prevent="flipPiece(piece.key)"
                 @keydown.enter.prevent="adjust(piece.money, 1)"
                 @keydown.space.prevent="adjust(piece.money, 1)"
               >
@@ -590,6 +573,7 @@ function endPan(event: PointerEvent) {
                   @pointermove.stop.prevent="moveDrag"
                   @pointerup.stop.prevent="endDrag"
                   @pointercancel.stop="cancelDrag"
+                  @contextmenu.stop.prevent="flipPiece(piece.key)"
                   @keydown.enter.prevent="returnPiece(piece.money, piece.key)"
                   @keydown.space.prevent="returnPiece(piece.money, piece.key)"
                 >
