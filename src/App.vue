@@ -476,6 +476,14 @@ const walletPieces = computed<WalletPiece[]>(() => {
 })
 const selectedPieces = computed<WalletPiece[]>(() => {
   const pieces: WalletPiece[] = []
+  const selectedBillCount = billDenominations.reduce(
+    (sum, money) => sum + (selected.value[money.id] ?? 0),
+    0,
+  )
+  const billRows = Math.ceil(selectedBillCount / 2)
+  const billRowGap = billRows > 1 ? Math.min(52, 155 / (billRows - 1)) : 0
+  const lastBillY = 185 + Math.max(0, billRows - 1) * billRowGap
+  const coinStartY = billRows ? lastBillY + 70 : 185
   let selectedBillIndex = 0
   let selectedCoinIndex = 0
   denominations.forEach((money) => {
@@ -487,8 +495,10 @@ const selectedPieces = computed<WalletPiece[]>(() => {
         key,
         money,
         index,
-        x: money.kind === 'bill' ? 130 + (displayIndex % 2) * 90 : 48 + (displayIndex % 6) * 50,
-        y: money.kind === 'bill' ? 190 + Math.floor(displayIndex / 2) * 62 : 405 + Math.floor(displayIndex / 6) * 46,
+        x: money.kind === 'bill' ? 105 + (displayIndex % 2) * 130 : 30 + (displayIndex % 8) * 42,
+        y: money.kind === 'bill'
+          ? 185 + Math.floor(displayIndex / 2) * billRowGap
+          : coinStartY + Math.floor(displayIndex / 8) * 42,
         rotation: ((displayIndex * 5) % 9) - 4,
       })
     }
