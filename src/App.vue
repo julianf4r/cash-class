@@ -118,6 +118,13 @@ const tableCanvasRef = ref<HTMLElement | null>(null)
 const trayRef = ref<HTMLElement | null>(null)
 const billDenominations = denominations.filter((item) => item.kind === 'bill')
 const coinDenominations = denominations.filter((item) => item.kind === 'coin')
+const levelNames = ['Quarter Basics', 'Quarter Combos', 'Real-World Cents']
+const quarterTips = [
+  'Think in quarters first: 25¢, 50¢, 75¢ — then fill the remainder.',
+  'For 65¢, start with two quarters. Only 15¢ remains.',
+  'A quarter plus a nickel makes 30¢ with just two coins.',
+  'Three quarters make 75¢. That shortcut replaces seven dimes and a nickel.',
+]
 let nextPieceLayer = 100
 
 function formatMoney(cents: number) {
@@ -147,26 +154,32 @@ function solveBounded(target: number, inventory: Record<string, number>) {
 }
 
 function makeRound(difficulty: number): Round {
-  const limits = difficulty === 1 ? { bill: 3, coin: 4 } : difficulty === 2 ? { bill: 4, coin: 5 } : { bill: 5, coin: 7 }
-  let inventory: Record<string, number> = {}
-  let target = 0
-  let answer = { count: 9999, selection: {} as Record<string, number> }
-  do {
-    inventory = {}
-    denominations.forEach((money) => {
-      const max = money.kind === 'bill' ? limits.bill : limits.coin
-      inventory[money.id] = Math.floor(Math.random() * max) + (money.id === 'penny' ? 2 : 1)
-    })
-    const chosen: Record<string, number> = {}
-    denominations.forEach((money) => {
-      const chance = difficulty === 1 ? 0.45 : 0.62
-      chosen[money.id] = Math.random() < chance
-        ? Math.floor(Math.random() * Math.min(inventory[money.id] ?? 0, difficulty + 1)) + 1
-        : 0
-    })
-    target = denominations.reduce((sum, money) => sum + (chosen[money.id] ?? 0) * money.value, 0)
-    answer = solveBounded(target, inventory)
-  } while (target < 35 || answer.count < 3 || answer.count > (difficulty === 1 ? 7 : 11))
+  const dollarPatterns = difficulty === 1
+    ? [1, 5, 10, 20]
+    : difficulty === 2
+      ? [6, 11, 15, 21, 25]
+      : [7, 12, 17, 22, 27, 32]
+  const centPatterns = difficulty === 1
+    ? [25, 50, 75]
+    : difficulty === 2
+      ? [30, 35, 40, 45, 55, 60, 65, 80, 85, 90, 95]
+      : [26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96]
+  const inventory: Record<string, number> = {
+    hundred: 1,
+    fifty: 1,
+    twenty: 2,
+    ten: 2,
+    five: 2,
+    one: 5,
+    quarter: 4,
+    dime: 10,
+    nickel: 5,
+    penny: difficulty === 3 ? 10 : 5,
+  }
+  const dollars = dollarPatterns[Math.floor(Math.random() * dollarPatterns.length)] ?? 1
+  const cents = centPatterns[Math.floor(Math.random() * centPatterns.length)] ?? 25
+  const target = dollars * 100 + cents
+  const answer = solveBounded(target, inventory)
   return { target, inventory, optimalCount: answer.count, optimalSelection: answer.selection }
 }
 
@@ -175,7 +188,7 @@ const selectedTotal = computed(() => denominations.reduce((sum, money) => sum + 
 const selectedCount = computed(() => Object.values(selected.value).reduce((sum, count) => sum + count, 0))
 const remaining = computed(() => round.value.target - selectedTotal.value)
 const progress = computed(() => Math.min((selectedTotal.value / round.value.target) * 100, 100))
-const currentTip = computed(() => denominations[(solved.value + level.value) % denominations.length]?.fact ?? '')
+const currentTip = computed(() => quarterTips[(solved.value + level.value - 1) % quarterTips.length] ?? '')
 
 function seededFace(key: string) {
   const seedText = `${round.value.target}-${level.value}-${key}`
@@ -262,12 +275,22 @@ const selectedPieces = computed<WalletPiece[]>(() => {
 const feedback = computed(() => {
   if (result.value === 'short') return `You're ${formatMoney(remaining.value)} short. Keep going!`
   if (result.value === 'over') return `That's ${formatMoney(Math.abs(remaining.value))} too much.`
-  if (result.value === 'not-optimal') return `Exact amount — but it can be done with ${round.value.optimalCount} pieces.`
+  if (result.value === 'not-optimal') {
+    const selectedQuarters = selected.value.quarter ?? 0
+    const optimalQuarters = round.value.optimalSelection.quarter ?? 0
+    if (selectedQuarters < optimalQuarters) {
+      return `Exact amount — now replace some dimes with quarters. The best answer uses ${round.value.optimalCount} pieces.`
+    }
+    return `Exact amount — but it can be done with ${round.value.optimalCount} pieces.`
+  }
   if (result.value === 'correct') return `Perfect! ${selectedCount.value} pieces is the fewest possible.`
   return ''
 })
 const currentHint = computed(() => {
-  const items = denominations.filter((money) => (round.value.optimalSelection[money.id] || 0) > 0)
+  const hintPriority = ['quarter', 'dime', 'nickel', 'penny', 'hundred', 'fifty', 'twenty', 'ten', 'five', 'one']
+  const items = denominations
+    .filter((money) => (round.value.optimalSelection[money.id] || 0) > 0)
+    .sort((a, b) => hintPriority.indexOf(a.id) - hintPriority.indexOf(b.id))
   const money = items[Math.min(hintStep.value - 1, items.length - 1)]
   return money ? `Try using ${round.value.optimalSelection[money.id]} × ${money.name}.` : ''
 })
@@ -537,12 +560,12 @@ function endPan(event: PointerEvent) {
       <div class="level-picker">
         <button class="level-button" @click="showLevelMenu = !showLevelMenu">
           <span class="level-dot">{{ level }}</span>
-          <span><small>LEARNING PATH</small>Level {{ level }} · {{ ['The Basics', 'Making Change', 'Cash Master'][level - 1] }}</span>
+          <span><small>LEARNING PATH</small>Level {{ level }} · {{ levelNames[level - 1] }}</span>
           <ChevronDown :size="16" />
         </button>
         <div v-if="showLevelMenu" class="level-menu">
           <button v-for="n in 3" :key="n" :class="{ active: level === n }" @click="changeLevel(n)">
-            Level {{ n }} · {{ ['The Basics', 'Making Change', 'Cash Master'][n - 1] }}
+            Level {{ n }} · {{ levelNames[n - 1] }}
           </button>
         </div>
       </div>
@@ -560,7 +583,7 @@ function endPan(event: PointerEvent) {
             <div>
               <span>
                 <strong>Choose your money</strong>
-                <p>Match the target using the fewest bills and coins possible.</p>
+                <p>Build the dollar part quickly, then look for quarters before dimes.</p>
               </span>
             </div>
             <button class="text-button" @click="resetSelection"><RotateCcw :size="15" /> Reset</button>
@@ -634,7 +657,7 @@ function endPan(event: PointerEvent) {
             >
               <div class="cash-zone-heading">
                 <span class="payment-label"><small>PAYMENT AREA</small><strong>Drop money here</strong></span>
-                <span class="target-pill"><small>TARGET</small><strong>{{ formatMoney(round.target) }}</strong></span>
+                <span class="target-pill"><small>QUARTER FOCUS · TARGET</small><strong>{{ formatMoney(round.target) }}</strong></span>
               </div>
               <div class="cash-zone-total">
                 <span>SELECTED</span>
