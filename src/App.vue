@@ -783,7 +783,7 @@ function endPan(event: PointerEvent) {
       <div class="coin-preview-image">
         <img :src="pieceImage(coinPreview.piece)" alt="" draggable="false">
       </div>
-      <span>
+      <span v-if="level !== 3">
         <strong>{{ coinPreview.piece.money.name }}</strong>
         <small>{{ pieceFace(coinPreview.piece) === 'front' ? 'Front side' : 'Reverse side' }} · magnified view</small>
       </span>
